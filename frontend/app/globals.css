@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+/* ============================================================
+   CSS Custom Properties — Design System Tahu
+   ============================================================ */
+:root {
+  /* Fonts */
+  --font-body: var(--font-inter), system-ui, sans-serif;
+  --font-heading: var(--font-sora), var(--font-inter), sans-serif;
+
+  /* Brand Colors */
+  --color-brand-50: oklch(97% 0.02 250);
+  --color-brand-100: oklch(93% 0.05 250);
+  --color-brand-400: oklch(72% 0.18 250);
+  --color-brand-500: oklch(62% 0.22 250);   /* primary */
+  --color-brand-600: oklch(52% 0.22 250);
+  --color-brand-900: oklch(22% 0.10 250);
+
+  /* Accent — Emerald untuk "skor bagus" */
+  --color-accent-400: oklch(78% 0.18 160);
+  --color-accent-500: oklch(68% 0.22 160);
+
+  /* Warning / Risk */
+  --color-risk-low: oklch(78% 0.18 145);      /* green */
+  --color-risk-medium: oklch(78% 0.18 75);    /* amber */
+  --color-risk-high: oklch(68% 0.20 25);      /* orange */
+  --color-risk-very-high: oklch(62% 0.22 15); /* red */
+
+  /* Surfaces */
+  --color-surface-dark: oklch(12% 0.02 250);
+  --color-surface-card: oklch(16% 0.02 250);
+  --color-surface-hover: oklch(20% 0.03 250);
+  --color-border: oklch(25% 0.03 250);
+
+  /* Scoring range display */
+  --score-min: 300;
+  --score-max: 850;
+}
+
+/* ============================================================
+   Base Styles
+   ============================================================ */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: oklch(10% 0.015 250);
+  color: oklch(92% 0.01 250);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* ============================================================
+   Utility Classes — akan dipakai di semua komponen
+   ============================================================ */
+
+/* Glass card effect */
+.glass-card {
+  background: oklch(16% 0.02 250 / 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+}
+
+/* Brand gradient text */
+.gradient-text {
+  background: linear-gradient(
+    135deg,
+    oklch(72% 0.18 250),
+    oklch(62% 0.22 250),
+    oklch(68% 0.22 160)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow button */
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-600));
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 20px oklch(62% 0.22 250 / 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 30px oklch(62% 0.22 250 / 0.5);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Chat bubble styles (Day 2) */
+.bubble-user {
+  background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-600));
+  color: white;
+  border-radius: 1rem 1rem 0.25rem 1rem;
+  max-width: 75%;
+}
+
+.bubble-ai {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  color: oklch(90% 0.01 250);
+  border-radius: 1rem 1rem 1rem 0.25rem;
+  max-width: 80%;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(30% 0.03 250);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(40% 0.05 250);
+}
+
+/* Typing indicator animation (Day 2) */
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-4px); }
+}
+
+.typing-dot {
+  animation: typing-dot 1.4s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Scoring gauge animation (Day 7) */
+@keyframes score-reveal {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: var(--dash-offset); }
+}
+
+/* Page transition */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
