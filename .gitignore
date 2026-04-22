@@ -1,0 +1,47 @@
+# ── Python (backend) ──────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# Secrets
+*.env
+!.env.example
+
+# ── Node / Next.js (frontend) ─────────────
+node_modules/
+.next/
+out/
+.cache/
+
+# Env files
+frontend/.env.local
+frontend/.env*.local
+!frontend/.env.local.example
+
+# Build artifacts
+frontend/dist/
+
+# ── Editor ────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Misc ──────────────────────────────────
+*.log
+*.tmp
+.turbo/
