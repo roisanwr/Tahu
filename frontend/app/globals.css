@@ -1,174 +1,301 @@
 @import "tailwindcss";
 
-/* ============================================================
-   CSS Custom Properties — Design System Tahu
-   ============================================================ */
+/* =============================================================
+   DESIGN SYSTEM — Tahu
+   Berbasis contoh.html + rulesui.md anti-pattern compliance
+   ============================================================= */
+
 :root {
-  /* Fonts */
-  --font-body: var(--font-inter), system-ui, sans-serif;
-  --font-heading: var(--font-sora), var(--font-inter), sans-serif;
+  /* ── Fonts ── */
+  --font-body: var(--font-plus-jakarta), system-ui, sans-serif;
+  --font-serif: var(--font-playfair), Georgia, serif;
 
-  /* Brand Colors */
-  --color-brand-50: oklch(97% 0.02 250);
-  --color-brand-100: oklch(93% 0.05 250);
-  --color-brand-400: oklch(72% 0.18 250);
-  --color-brand-500: oklch(62% 0.22 250);   /* primary */
-  --color-brand-600: oklch(52% 0.22 250);
-  --color-brand-900: oklch(22% 0.10 250);
+  /* ── Brand Colors ── */
+  --color-accent:       #0D6B4F;
+  --color-accent-light: #E8F5EF;
+  --color-accent-dark:  #094D39;
+  --color-accent-alt:   #2EA77A;
+  --color-navy:         #1B2A4A;
+  --color-navy-light:   #2C4066;
 
-  /* Accent — Emerald untuk "skor bagus" */
-  --color-accent-400: oklch(78% 0.18 160);
-  --color-accent-500: oklch(68% 0.22 160);
+  /* ── Background & Surface ── */
+  --color-bg:           #FAFAF8;
+  --color-surface:      #FFFFFF;
+  --color-warm-gray:    #F5F4F0;
 
-  /* Warning / Risk */
-  --color-risk-low: oklch(78% 0.18 145);      /* green */
-  --color-risk-medium: oklch(78% 0.18 75);    /* amber */
-  --color-risk-high: oklch(68% 0.20 25);      /* orange */
-  --color-risk-very-high: oklch(62% 0.22 15); /* red */
+  /* ── Tinted Neutrals (bukan pure gray) ── */
+  --color-text-primary:   #1A1A18;
+  --color-text-secondary: #5A5A56;
+  --color-text-muted:     #8A8A84;
 
-  /* Surfaces */
-  --color-surface-dark: oklch(12% 0.02 250);
-  --color-surface-card: oklch(16% 0.02 250);
-  --color-surface-hover: oklch(20% 0.03 250);
-  --color-border: oklch(25% 0.03 250);
+  /* ── Borders ── */
+  --color-border:       #E8E8E4;
+  --color-border-light: #F0F0EC;
 
-  /* Scoring range display */
-  --score-min: 300;
-  --score-max: 850;
+  /* ── Shadows ── */
+  --shadow-sm:  0 1px 2px rgba(26, 26, 24, 0.04);
+  --shadow-md:  0 4px 12px rgba(26, 26, 24, 0.06);
+  --shadow-lg:  0 8px 30px rgba(26, 26, 24, 0.08);
+  --shadow-xl:  0 16px 50px rgba(26, 26, 24, 0.10);
+
+  /* ── Radius ── */
+  --radius-sm:  6px;
+  --radius-md:  12px;
+  --radius-lg:  20px;
+  --radius-xl:  28px;
+
+  /* ── Typography Scale (rasio 1.25 — Major Third) ── */
+  --text-xs:      0.75rem;
+  --text-sm:      0.875rem;
+  --text-base:    1rem;
+  --text-lg:      1.125rem;
+  --text-xl:      1.25rem;
+  --text-2xl:     1.563rem;
+  --text-3xl:     1.953rem;
+  --text-4xl:     2.441rem;
+  --text-5xl:     3.052rem;
+  --text-display: 3.815rem;
+
+  /* ── Spacing Scale (8px grid) ── */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+  --space-32: 8rem;
+
+  /* ── Easing ── */
+  --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:    cubic-bezier(0.4, 0, 1, 1);
+  --ease-inout: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Duration ── */
+  --dur-fast:   180ms;
+  --dur-normal: 350ms;
+  --dur-slow:   600ms;
 }
 
-/* ============================================================
-   Base Styles
-   ============================================================ */
-* {
+/* =============================================================
+   RESET & BASE
+   ============================================================= */
+*, *::before, *::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html {
   scroll-behavior: smooth;
-}
-
-body {
-  font-family: var(--font-body);
-  background-color: oklch(10% 0.015 250);
-  color: oklch(92% 0.01 250);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+img, video { max-width: 100%; display: block; }
+a { text-decoration: none; color: inherit; }
+button { cursor: pointer; }
+
+/* =============================================================
+   TYPOGRAPHY
+   ============================================================= */
+.font-serif {
+  font-family: var(--font-serif);
+}
+
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  letter-spacing: -0.02em;
   line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--color-navy);
 }
 
-/* ============================================================
-   Utility Classes — akan dipakai di semua komponen
-   ============================================================ */
-
-/* Glass card effect */
-.glass-card {
-  background: oklch(16% 0.02 250 / 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
+/* =============================================================
+   LAYOUT UTILITIES
+   ============================================================= */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
 }
 
-/* Brand gradient text */
-.gradient-text {
-  background: linear-gradient(
-    135deg,
-    oklch(72% 0.18 250),
-    oklch(62% 0.22 250),
-    oklch(68% 0.22 160)
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.container-narrow {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
 }
 
-/* Glow button */
+@media (max-width: 768px) {
+  .container,
+  .container-narrow {
+    padding: 0 var(--space-4);
+  }
+}
+
+/* =============================================================
+   GLOBAL BUTTON STYLES
+   ============================================================= */
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-600));
-  color: white;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-accent);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
   font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
+  letter-spacing: 0.01em;
+  border-radius: var(--radius-sm);
   border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 0 20px oklch(62% 0.22 250 / 0.3);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
 }
 
 .btn-primary:hover {
+  background: var(--color-accent-dark);
   transform: translateY(-1px);
-  box-shadow: 0 0 30px oklch(62% 0.22 250 / 0.5);
+  box-shadow: 0 6px 20px rgba(13, 107, 79, 0.25);
 }
 
 .btn-primary:active {
   transform: translateY(0);
 }
 
-/* Chat bubble styles (Day 2) */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-text-muted);
+  background: var(--color-warm-gray);
+}
+
+/* =============================================================
+   SECTION LABEL SYSTEM
+   ============================================================= */
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-accent);
+}
+
+.section-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-4xl);
+  font-weight: 700;
+  color: var(--color-navy);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.section-subtitle {
+  font-size: var(--text-lg);
+  color: var(--color-text-secondary);
+  line-height: 1.75;
+  max-width: 540px;
+}
+
+@media (max-width: 768px) {
+  .section-title  { font-size: var(--text-3xl); }
+  .section-subtitle { font-size: var(--text-base); }
+}
+
+/* =============================================================
+   SCROLLBAR
+   ============================================================= */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* =============================================================
+   ACCESSIBILITY — Reduced Motion
+   ============================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+}
+
+/* =============================================================
+   SUBTLE TEXTURE OVERLAY (< 5% opacity — rulesui.md compliant)
+   ============================================================= */
+.texture-overlay {
+  position: relative;
+}
+
+.texture-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.04;
+  border-radius: inherit;
+}
+
+/* =============================================================
+   CHAT BUBBLES (dipakai di halaman /chat — tidak hapus)
+   ============================================================= */
 .bubble-user {
-  background: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-600));
-  color: white;
-  border-radius: 1rem 1rem 0.25rem 1rem;
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: 14px 14px 4px 14px;
   max-width: 75%;
 }
 
 .bubble-ai {
-  background: var(--color-surface-card);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  color: oklch(90% 0.01 250);
-  border-radius: 1rem 1rem 1rem 0.25rem;
+  color: var(--color-text-primary);
+  border-radius: 14px 14px 14px 4px;
   max-width: 80%;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: oklch(30% 0.03 250);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: oklch(40% 0.05 250);
-}
-
-/* Typing indicator animation (Day 2) */
-@keyframes typing-dot {
-  0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
-  30% { opacity: 1; transform: translateY(-4px); }
-}
-
-.typing-dot {
-  animation: typing-dot 1.4s infinite;
-}
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-/* Scoring gauge animation (Day 7) */
-@keyframes score-reveal {
-  from { stroke-dashoffset: 1000; }
-  to { stroke-dashoffset: var(--dash-offset); }
-}
-
-/* Page transition */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.4s ease-out forwards;
-}
+/* =============================================================
+   SCORE / RISK COLORS
+   ============================================================= */
+.score-low     { color: #15803d; }
+.score-medium  { color: #b45309; }
+.score-high    { color: #c2410c; }
+.score-vh      { color: #b91c1c; }

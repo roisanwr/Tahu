@@ -1,39 +1,48 @@
 import type { Metadata } from "next";
-import { Inter, Sora } from "next/font/google";
+import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-// Body font — sangat readable untuk teks panjang
-const inter = Inter({
-  variable: "--font-inter",
+// Body font — modern, humanist, readable
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
   display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-// Heading font — modern & tegas untuk judul scoring
-const sora = Sora({
-  variable: "--font-sora",
+// Heading font — klasik serif untuk authority & trustworthiness
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
   subsets: ["latin"],
   display: "swap",
-  weight: ["400", "600", "700", "800"],
+  weight: ["600", "700"],
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "Tahu — Credit Scoring UMKM",
+    default: "Tahu — Nilai Kredit UMKM Berbasis AI",
     template: "%s | Tahu",
   },
   description:
-    "Platform credit scoring UMKM berbasis AI conversational interview. " +
-    "Dapatkan penilaian kredit yang akurat dan adil melalui percakapan natural dengan AI.",
-  keywords: ["credit scoring", "UMKM", "AI", "kredit", "pinjaman", "Indonesia"],
-  authors: [{ name: "Tahu Team" }],
+    "Platform penilaian kredit UMKM berbasis wawancara AI yang natural. " +
+    "Tidak perlu formulir panjang — cukup ceritakan usahamu, dapatkan skor kredit dalam hitungan menit.",
+  keywords: [
+    "kredit UMKM",
+    "skor kredit",
+    "pinjaman usaha",
+    "AI kredit",
+    "wawancara kredit",
+    "platform UMKM",
+    "Indonesia",
+  ],
+  authors: [{ name: "Tim Tahu" }],
   openGraph: {
     type: "website",
     locale: "id_ID",
     siteName: "Tahu",
-    title: "Tahu — Credit Scoring UMKM berbasis AI",
+    title: "Tahu — Nilai Kredit UMKM Berbasis AI",
     description:
-      "Dapatkan credit score UMKM yang akurat dan adil melalui wawancara AI yang natural.",
+      "Dapatkan penilaian kredit UMKM yang akurat dan adil melalui wawancara AI yang natural dan santai.",
   },
 };
 
@@ -45,9 +54,9 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${inter.variable} ${sora.variable} h-full antialiased`}
+      className={`${plusJakarta.variable} ${playfair.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100">
+      <body className="min-h-full flex flex-col" style={{ backgroundColor: "var(--color-bg)", color: "var(--color-text-primary)" }}>
         {children}
       </body>
     </html>
