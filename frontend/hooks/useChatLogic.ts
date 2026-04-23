@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 export type MessageWidget = "none" | "location_request" | "location_result" | "upload_request" | "image_result";
 
@@ -15,6 +16,8 @@ export type Message = {
 const formatTime = () => new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
 
 export function useChatLogic() {
+  const router = useRouter();
+
   const [messages, setMessages] = useState<Message[]>([
     { id: "1", sender: "bot", text: "Halo, selamat datang di Tahu! 👋 Wahai pahlawan ekonomi, usaha apa nih yang lagi kamu jalanin hari ini?", time: formatTime() }
   ]);
@@ -93,7 +96,11 @@ export function useChatLogic() {
   };
 
   const handleGoogleLogin = () => {
-    alert("Simulasi Login Google! Di tahap integrasi backend nanti, ini akn mengarah ke halaman OAuth Google.");
+    // Simulasi integrasi backend delay
+    setIsTyping(true);
+    setTimeout(() => {
+      router.push('/dashboard');
+    }, 1000);
   };
 
   return {
