@@ -1,6 +1,16 @@
 import { useState, useRef } from "react";
 
-export type Message = { id: string; sender: "bot" | "user"; text: string; time: string };
+export type MessageWidget = "none" | "location_request" | "location_result" | "upload_request" | "image_result";
+
+export type Message = { 
+  id: string; 
+  sender: "bot" | "user"; 
+  text: string; 
+  time: string;
+  widget?: MessageWidget;
+  attachmentUrl?: string; 
+  locationData?: { address: string, lat: number, lng: number };
+};
 
 const formatTime = () => new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
 
@@ -31,9 +41,53 @@ export function useChatLogic() {
     } else if (stepRef.current === 2) {
       setTimeout(() => {
         setIsTyping(false);
-        setMessages(prev => [...prev, { id: Date.now().toString(), sender: "bot", text: `Keren banget udah bertahan ${userText}! Nah, biar progres skor kredit ini tersimpan otomatis, klik tombol di bawah buat login cepat pakai Google ya.`, time: formatTime() }]);
-        setShowLogin(true);
+        setMessages(prev => [...prev, { id: Date.now().toString(), sender: "bot", text: `Boleh minta lokasi usahamu sekarang biar aku bisa analisa seberapa strategis tempat mu usaha.`, time: formatTime(), widget: "location_request" }]);
         stepRef.current = 3;
+      }, 1500);
+    } else if (stepRef.current === 3) {
+      // In case user bypasses location by typing
+      setTimeout(() => {
+        setIsTyping(false);
+        setMessages(prev => [...prev, { id: Date.now().toString(), sender: "bot", text: `Menarik. Biar skor kreditnya makin akurat, upload satu foto bukti usahamu ya (misal: nota, barang, atau plang toko).`, time: formatTime(), widget: "upload_request" }]);
+        stepRef.current = 4;
+      }, 1500);
+    } else if (stepRef.current === 4) {
+      // In case user bypasses upload by typing
+      setTimeout(() => {
+        setIsTyping(false);
+        setMessages(prev => [...prev, { id: Date.now().toString(), sender: "bot", text: `Sip! Berkas profil usahamu udah komplit. Nah, biar progres skor kredit ini tersimpan otomatis, klik tombol di bawah buat login cepat pakai Google ya.`, time: formatTime() }]);
+        setShowLogin(true);
+        stepRef.current = 5;
+      }, 1500);
+    }
+  };
+
+  const handleWidgetAction = (type: "location" | "upload", data?: any) => {
+    setIsTyping(true);
+    
+    if (type === "location") {
+      setMessages(prev => [...prev, { 
+        id: Date.now().toString(), sender: "user", text: "", time: formatTime(), 
+        widget: "location_result", locationData: data 
+      }]);
+      
+      setTimeout(() => {
+        setIsTyping(false);
+        setMessages(prev => [...prev, { id: Date.now().toString(), sender: "bot", text: `Lokasi strategis tercatat di ${data.address}! Biar lebih lengkap, coba upload foto bukti usahamu dong buat dinilai.`, time: formatTime(), widget: "upload_request" }]);
+        stepRef.current = 4;
+      }, 1500);
+    } 
+    else if (type === "upload") {
+      setMessages(prev => [...prev, { 
+        id: Date.now().toString(), sender: "user", text: data?.text || "", time: formatTime(), 
+        widget: "image_result", attachmentUrl: data?.url 
+      }]);
+      
+      setTimeout(() => {
+        setIsTyping(false);
+        setMessages(prev => [...prev, { id: Date.now().toString(), sender: "bot", text: `Sip! Fotonya udah masuk. Nah, biar progres skor kredit ini tersimpan otomatis, klik tombol di bawah buat login cepat pakai Google ya.`, time: formatTime() }]);
+        setShowLogin(true);
+        stepRef.current = 5;
       }, 1500);
     }
   };
@@ -49,6 +103,7 @@ export function useChatLogic() {
     isTyping,
     showLogin,
     handleSend,
+    handleWidgetAction,
     handleGoogleLogin,
     currentStep: stepRef.current
   };

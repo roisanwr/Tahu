@@ -24,7 +24,7 @@ export default function ChatPage() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const {
-    messages, inputValue, setInputValue, isTyping, showLogin, handleSend, handleGoogleLogin, currentStep
+    messages, inputValue, setInputValue, isTyping, showLogin, handleSend, handleWidgetAction, handleGoogleLogin, currentStep
   } = useChatLogic();
 
   useGSAP(() => {
@@ -101,7 +101,7 @@ export default function ChatPage() {
             </div>
 
             {messages.map(msg => (
-              <ChatBubble key={msg.id} message={msg} fontSize={getFontSize()} />
+              <ChatBubble key={msg.id} message={msg} fontSize={getFontSize()} onWidgetAction={handleWidgetAction} />
             ))}
 
             {isTyping && <ChatTypingIndicator />}
