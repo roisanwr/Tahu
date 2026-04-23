@@ -5,11 +5,13 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ArrowRight, TrendingUp, MapPin, FileCheck, ShieldCheck, BarChart2 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { CreditGauge }    from "../../components/dashboard/CreditGauge";
 import { SubScoreCard }   from "../../components/dashboard/SubScoreCard";
 import { LoanBanner }     from "../../components/dashboard/LoanBanner";
 import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
 import { RiskBadge }      from "../../components/dashboard/RiskBadge";
+import { ChatDrawer }     from "../../components/chat/ChatDrawer";
 
 gsap.registerPlugin(useGSAP);
 
@@ -29,7 +31,8 @@ const userData = {
 };
 
 export default function DashboardPage() {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef  = useRef<HTMLDivElement>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useGSAP(() => {
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
@@ -42,7 +45,8 @@ export default function DashboardPage() {
   return (
     <div style={{ display: "flex", width: "100%", minHeight: "100vh", backgroundColor: "var(--color-bg)", flexDirection: "column" }}>
 
-      <DashboardHeader />
+      <ChatDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <DashboardHeader onOpenDrawer={() => setDrawerOpen(true)} />
 
       <main style={{ display: "flex", flex: 1, justifyContent: "center", width: "100%" }}>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", maxWidth: 950, width: "100%", backgroundColor: "var(--color-bg)", borderLeft: "1px solid var(--color-border)", borderRight: "1px solid var(--color-border)", minHeight: "100%" }}>

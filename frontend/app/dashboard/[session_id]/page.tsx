@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ArrowLeft, Download, BarChart2, TrendingUp, MapPin, FileCheck, Activity } from "lucide-react";
@@ -15,6 +15,7 @@ import { RiskBadge }          from "../../../components/dashboard/RiskBadge";
 import { RadarChart }         from "../../../components/dashboard/RadarChart";
 import { ScoreBreakdownBar }  from "../../../components/dashboard/ScoreBreakdownBar";
 import { AIExplanationCard }  from "../../../components/dashboard/AIExplanationCard";
+import { ChatDrawer }         from "../../../components/chat/ChatDrawer";
 
 gsap.registerPlugin(useGSAP);
 
@@ -71,6 +72,7 @@ interface PageProps {
 export default function SessionDashboardPage({ params }: PageProps) {
   const { session_id } = use(params);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useGSAP(() => {
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
@@ -98,7 +100,8 @@ export default function SessionDashboardPage({ params }: PageProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", width: "100%", minHeight: "100vh", backgroundColor: "var(--color-bg)" }}>
-      <DashboardHeader />
+      <ChatDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <DashboardHeader onOpenDrawer={() => setDrawerOpen(true)} />
 
       <main style={{ display: "flex", flex: 1, justifyContent: "center", width: "100%" }}>
         <div
