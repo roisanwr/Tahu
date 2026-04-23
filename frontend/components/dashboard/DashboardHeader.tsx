@@ -1,12 +1,15 @@
 import { Menu } from "lucide-react";
 import { TahuLogo } from "../icons/TahuLogo";
 import Link from "next/link";
+import { useAuth } from "../../lib/auth-context";
 
 interface DashboardHeaderProps {
   onOpenDrawer?: () => void;
 }
 
 export function DashboardHeader({ onOpenDrawer }: DashboardHeaderProps) {
+  const { isLoggedIn } = useAuth();
+  
   return (
     <header style={{ padding: "0 24px", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64, borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)", position: "sticky", top: 0, zIndex: 10, flexShrink: 0 }}>
       {/* Left Area */}
@@ -25,7 +28,7 @@ export function DashboardHeader({ onOpenDrawer }: DashboardHeaderProps) {
           <TahuLogo size={28} />
           <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1, userSelect: "none" }}>
             <span style={{ color: "var(--color-accent)", fontWeight: 800, fontSize: 15, letterSpacing: "-0.5px" }}>TAHU</span>
-            <span style={{ color: "var(--color-navy)", fontSize: 9, fontWeight: 700 }}>SMART CREDIT INTERVIEW</span>
+            <span style={{ color: "var(--color-navy)", fontSize: 9, fontWeight: 700 }}>NILAI KREDIT AI</span>
           </div>
         </Link>
       </div>
@@ -37,7 +40,11 @@ export function DashboardHeader({ onOpenDrawer }: DashboardHeaderProps) {
 
       {/* Right Area */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flex: 1 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-accent)", background: "var(--color-accent-light)", padding: "4px 10px", borderRadius: 99 }}>Laporan Selesai</div>
+        {isLoggedIn ? (
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-accent)", background: "var(--color-accent-light)", padding: "4px 10px", borderRadius: 99 }}>Data Tersimpan</div>
+        ) : (
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-muted)", background: "var(--color-bg)", border: "1px solid var(--color-border)", padding: "4px 10px", borderRadius: 99 }}>Guest Mode</div>
+        )}
       </div>
     </header>
   );

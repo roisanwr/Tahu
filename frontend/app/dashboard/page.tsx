@@ -5,13 +5,14 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ArrowRight, TrendingUp, MapPin, FileCheck, ShieldCheck, BarChart2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CreditGauge }    from "../../components/dashboard/CreditGauge";
 import { SubScoreCard }   from "../../components/dashboard/SubScoreCard";
 import { LoanBanner }     from "../../components/dashboard/LoanBanner";
 import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
 import { RiskBadge }      from "../../components/dashboard/RiskBadge";
 import { ChatDrawer }     from "../../components/chat/ChatDrawer";
+import { useAuth }        from "../../lib/auth-context";
 
 gsap.registerPlugin(useGSAP);
 
@@ -33,8 +34,19 @@ const userData = {
 export default function DashboardPage() {
   const containerRef  = useRef<HTMLDivElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [hasSession, setHasSession] = useState(true); // default true for hydration, checked in effect
+  const [isMounted, setIsMounted]   = useState(false);
+  const { isLoggedIn } = useAuth();
+
+  useEffect(() => {
+    setIsMounted(true);
+    const stored = localStorage.getItem("tahu_last_session");
+    // Di real app, logicnya: fetch dari API. Untuk proto, cek localStorage & status auth.
+    setHasSession(!!stored && isLoggedIn);
+  }, [isLoggedIn]);
 
   useGSAP(() => {
+    if (!isMounted || !hasSession) return;
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
     tl.to(".dashboard-hero",   { opacity: 1, y: 0, duration: 0.6, ease: "back.out(1.2)" })
       .to(".dashboard-metric", { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 }, "-=0.2")
@@ -51,10 +63,25 @@ export default function DashboardPage() {
       <main style={{ display: "flex", flex: 1, justifyContent: "center", width: "100%" }}>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", maxWidth: 950, width: "100%", backgroundColor: "var(--color-bg)", borderLeft: "1px solid var(--color-border)", borderRight: "1px solid var(--color-border)", minHeight: "100%" }}>
 
+          {isMounted && !hasSession ? (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--color-surface)", border: "1.5px dashed var(--color-border)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                <BarChart2 size={24} color="var(--color-text-muted)" />
+              </div>
+              <h2 style={{ fontSize: 20, color: "var(--color-navy)", marginBottom: 8, fontWeight: 800 }}>Belum Ada Data Penilaian</h2>
+              <p style={{ color: "var(--color-text-muted)", fontSize: 13, marginBottom: 24, maxWidth: 320, lineHeight: 1.5 }}>
+                Mulai obrolan santai dengan AI kami untuk mendapatkan analisis lengkap kekuatan usahamu dan rekomendasi pinjaman.
+              </p>
+              <Link href="/chat" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", background: "var(--color-accent)", color: "#fff", textDecoration: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "var(--color-accent-dark)"} onMouseLeave={e => e.currentTarget.style.background = "var(--color-accent)"}>
+                Cek Skor Kredit Sekarang
+                <ArrowRight size={14} strokeWidth={2.5} />
+              </Link>
+            </div>
+          ) : (
           <div ref={containerRef} style={{ padding: "28px 20px 64px", display: "flex", flexDirection: "column", gap: 32 }}>
 
             {/* Title + latest session badge */}
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+            <div className="dashboard-hero" style={{ opacity: 0, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
               <div>
                 <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--color-navy)", margin: "0 0 8px", letterSpacing: "-0.4px" }}>
                   Ringkasan Penilaian
@@ -165,6 +192,7 @@ export default function DashboardPage() {
             </div>
 
           </div>
+          )}
         </div>
       </main>
     </div>

@@ -147,7 +147,7 @@ export function ChatInput({ inputValue, setInputValue, onSend, onFileUpload, dis
             onChange={handleInput}
             onKeyDown={handleKeyDown}
             disabled={disabled || showOCR}
-            placeholder={showOCR ? "Menganalisis dokumen..." : disabled ? "Tunggu sebentar..." : "Ketik pesan Anda di sini..."}
+            placeholder={showOCR ? "Mengekstrak data dokumen..." : disabled ? "AI sedang mengetik..." : "Ceritain usahamu di sini..."}
             rows={1}
             style={{
               flex: 1, border: "none", background: "transparent", outline: "none",

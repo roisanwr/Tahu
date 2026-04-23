@@ -8,7 +8,7 @@ interface CreditGaugeProps {
   maxScore?: number;
 }
 
-export function CreditGauge({ score, maxScore = 1000 }: CreditGaugeProps) {
+export function CreditGauge({ score, maxScore = 850 }: CreditGaugeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const [displayScore, setDisplayScore] = useState(0);

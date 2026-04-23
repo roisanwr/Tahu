@@ -13,7 +13,7 @@ export function ChatHeader({ onOpenDrawer, textSize, setTextSize, currentStep }:
   const [showHelpMenu, setShowHelpMenu] = useState(false);
   const [showTextSizeMenu, setShowTextSizeMenu] = useState(false);
 
-  const totalSteps = 6;
+  const totalSteps = 5;
 
   const renderProgressBar = () => {
     return (
@@ -69,14 +69,14 @@ export function ChatHeader({ onOpenDrawer, textSize, setTextSize, currentStep }:
           <TahuLogo size={28} />
           <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1, userSelect: "none" }}>
             <span style={{ color: "var(--color-accent)", fontWeight: 800, fontSize: 15, letterSpacing: "-0.5px" }}>TAHU</span>
-            <span style={{ color: "var(--color-navy)", fontSize: 9, fontWeight: 700 }}>SMART CREDIT INTERVIEW</span>
+            <span style={{ color: "var(--color-navy)", fontSize: 9, fontWeight: 700 }}>NILAI KREDIT AI</span>
           </div>
         </div>
       </div>
 
       {/* Center Area */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, flexShrink: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-navy)", letterSpacing: "0.2px" }}>SMART I-Join</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-navy)", letterSpacing: "0.2px" }}>Wawancara</span>
         {renderProgressBar()}
       </div>
 
