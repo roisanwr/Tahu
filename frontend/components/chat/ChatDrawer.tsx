@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, X, Home, ChevronRight, BarChart2, Clock, LogIn, LogOut, PlusCircle, LayoutDashboard } from "lucide-react";
+import { User, X, Home, ChevronRight, BarChart2, Clock, LogIn, LogOut, PlusCircle, LayoutDashboard, Settings } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
+import { useState } from "react";
+import { EditProfileModal, BusinessProfileData } from "../dashboard/EditProfileModal";
 
 interface ChatDrawerProps {
   isOpen: boolean;
@@ -40,6 +42,16 @@ const MOCK_SESSIONS = [
 export function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
   const { user, isLoggedIn, logout } = useAuth();
   const router = useRouter();
+  
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [profileData, setProfileData] = useState<BusinessProfileData>({
+    business_name: "Warung Sembako Bu Sari",
+    owner_name: "Budi Santoso", 
+    category: "F&B / Kuliner",
+    description: "Toko sembako melayani warga setempat",
+    employee_count: 2,
+    location_address: "Jl. Sudirman No 42",
+  });
 
   const handleLogout = () => {
     logout();
@@ -254,6 +266,24 @@ export function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
 
           {isLoggedIn && (
             <button
+              onClick={() => { onClose(); setIsEditModalOpen(true); }}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "10px 12px", borderRadius: 8,
+                color: "var(--color-text-primary)", background: "transparent", border: "none",
+                fontSize: 13, fontWeight: 600, cursor: "pointer",
+                textAlign: "left", width: "100%", transition: "background 0.2s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--color-bg)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <Settings size={16} strokeWidth={1.8} />
+              Pengaturan Profil
+            </button>
+          )}
+
+          {isLoggedIn && (
+            <button
               onClick={handleLogout}
               style={{
                 display: "flex", alignItems: "center", gap: 10,
@@ -275,6 +305,13 @@ export function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
           </div>
         </div>
       </div>
+      
+      <EditProfileModal 
+        isOpen={isEditModalOpen} 
+        onClose={() => setIsEditModalOpen(false)} 
+        initialData={profileData}
+        onSave={(data) => setProfileData(data)} 
+      />
     </>
   );
 }

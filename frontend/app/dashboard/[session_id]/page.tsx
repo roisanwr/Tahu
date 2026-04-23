@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ArrowLeft, Download, BarChart2, TrendingUp, MapPin, FileCheck, Activity } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, BarChart2, TrendingUp, MapPin, FileCheck, Activity } from "lucide-react";
 import Link from "next/link";
 import { use } from "react";
 
