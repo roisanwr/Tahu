@@ -3,6 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(useGSAP);
 
 type Message = { id: string; sender: "bot" | "user"; text: string; time: string };
 
@@ -21,7 +25,44 @@ export default function ChatPage() {
   const [showHelpMenu, setShowHelpMenu] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const stepRef = useRef(1);
+
+  useGSAP(() => {
+    // 1. Chat Bubbles Entering
+    gsap.utils.toArray<HTMLElement>('.gsap-bubble:not(.is-animated)').forEach((bubble, index) => {
+      const isUser = bubble.dataset.sender === "user";
+      gsap.fromTo(bubble, 
+        { opacity: 0, x: isUser ? 40 : -40, scale: 0.8 }, 
+        { 
+          opacity: 1, x: 0, scale: 1, duration: 0.5, ease: "back.out(1.2)", 
+          delay: index * 0.05, 
+          onComplete: () => bubble.classList.add('is-animated') 
+        }
+      );
+    });
+
+    // 2. Typing Indicator
+    gsap.utils.toArray<HTMLElement>('.gsap-typing:not(.is-animated)').forEach(indicator => {
+      gsap.fromTo(indicator,
+        { opacity: 0, y: 15, scale: 0.8 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: "back.out(1.4)", onComplete: () => indicator.classList.add('is-animated') }
+      );
+    });
+
+    // 3. Typing Dots Bouncing
+    gsap.to('.typing-dot', {
+      y: -4, duration: 0.3, stagger: 0.1, yoyo: true, repeat: -1, ease: "power1.inOut"
+    });
+
+    // 4. Login Box Emerging
+    gsap.utils.toArray<HTMLElement>('.gsap-login:not(.is-animated)').forEach(loginBox => {
+      gsap.fromTo(loginBox,
+        { opacity: 0, scale: 0.9, y: 30 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: "back.out(1.2)", delay: 0.2, onComplete: () => loginBox.classList.add('is-animated') }
+      );
+    });
+  }, { scope: containerRef, dependencies: [messages, isTyping, showLogin] });
 
   const getFontSize = () => {
     if (textSize === "small") return "14px";
@@ -224,7 +265,7 @@ export default function ChatPage() {
           </div>
         </header>
 
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, backgroundColor: "var(--color-bg)", maxWidth: 950, width: "100%", margin: "0 auto", position: "relative", overflow: "hidden", boxShadow: "var(--shadow-md)", borderLeft: "1px solid var(--color-border)", borderRight: "1px solid var(--color-border)" }}>
+        <div ref={containerRef} style={{ display: "flex", flexDirection: "column", flex: 1, backgroundColor: "var(--color-bg)", maxWidth: 950, width: "100%", margin: "0 auto", position: "relative", overflow: "hidden", boxShadow: "var(--shadow-md)", borderLeft: "1px solid var(--color-border)", borderRight: "1px solid var(--color-border)" }}>
 
           {/* Chat messages */}
           <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 16, scrollBehavior: "smooth" }}>
@@ -235,7 +276,7 @@ export default function ChatPage() {
             </div>
 
             {messages.map(msg => (
-              <div key={msg.id} style={{ display: "flex", alignItems: "flex-end", gap: 8, justifyContent: msg.sender === "user" ? "flex-end" : "flex-start", animation: "fade-in 0.3s ease-out forwards" }}>
+              <div key={msg.id} className="gsap-bubble" data-sender={msg.sender} style={{ display: "flex", alignItems: "flex-end", gap: 8, justifyContent: msg.sender === "user" ? "flex-end" : "flex-start", opacity: 0 }}>
 
                 {msg.sender === "bot" && (
                   <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "12px", fontWeight: 700, flexShrink: 0, fontStyle: "italic" }}>
@@ -274,7 +315,7 @@ export default function ChatPage() {
             ))}
 
             {isTyping && (
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 8, justifyContent: "flex-start", animation: "fade-in 0.3s ease-out forwards" }}>
+              <div className="gsap-typing" style={{ display: "flex", alignItems: "flex-end", gap: 8, justifyContent: "flex-start", opacity: 0 }}>
                 <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "12px", fontWeight: 700, flexShrink: 0, fontStyle: "italic" }}>
                   T
                 </div>
@@ -294,7 +335,7 @@ export default function ChatPage() {
             )}
 
             {showLogin && (
-              <div style={{ display: "flex", justifyContent: "center", margin: "24px 0", animation: "fade-in 0.5s ease-out forwards" }}>
+              <div className="gsap-login" style={{ display: "flex", justifyContent: "center", margin: "24px 0", opacity: 0 }}>
                 <button
                   onClick={handleGoogleLogin}
                   style={{
