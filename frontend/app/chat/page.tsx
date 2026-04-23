@@ -18,6 +18,7 @@ export default function ChatPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [textSize, setTextSize] = useState<"small" | "medium" | "large">("medium");
   const [showTextSizeMenu, setShowTextSizeMenu] = useState(false);
+  const [showHelpMenu, setShowHelpMenu] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const stepRef = useRef(1);
@@ -142,18 +143,54 @@ export default function ChatPage() {
 
           {/* Right Area */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flex: 1 }}>
-            <button
-              style={{ width: 32, height: 32, border: "none", background: "transparent", cursor: "pointer", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-primary)", transition: "background 0.2s" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--color-bg)"}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-              title="Bantuan Pusat"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-              </svg>
-            </button>
+            {/* Help Dropdown */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowHelpMenu(!showHelpMenu)}
+                style={{ width: 32, height: 32, border: "none", background: showHelpMenu ? "var(--color-bg)" : "transparent", cursor: "pointer", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: showHelpMenu ? "var(--color-navy)" : "var(--color-text-primary)", transition: "all 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--color-bg)"}
+                onMouseLeave={e => e.currentTarget.style.background = showHelpMenu ? "var(--color-bg)" : "transparent"}
+                title="Bantuan Pusat"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+              </button>
+
+              {showHelpMenu && (
+                <>
+                  <div onClick={() => setShowHelpMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+                  <div style={{ 
+                    position: "absolute", top: "calc(100% + 8px)", right: 0, 
+                    background: "var(--color-surface)", border: "1px solid var(--color-border)", 
+                    borderRadius: 12, boxShadow: "var(--shadow-lg)", padding: "16px", 
+                    display: "flex", flexDirection: "column", gap: 12, zIndex: 50,
+                    width: "240px",
+                    animation: "fade-in-down 0.2s ease-out forwards"
+                  }}>
+                    <div style={{ fontSize: "14px", color: "var(--color-text-primary)", lineHeight: 1.5 }}>
+                      Apakah kamu menghadapi teknikal issue?
+                    </div>
+                    <a 
+                      href="#" 
+                      onClick={(e) => { e.preventDefault(); alert("Dummy: Akan diarahkan ke Email / WhatsApp Support"); setShowHelpMenu(false); }}
+                      style={{ 
+                        display: "flex", alignItems: "center", justifyContent: "center", 
+                        padding: "10px 16px", background: "var(--color-surface)", border: "1px solid var(--color-border)",
+                        borderRadius: 8, color: "var(--color-navy)", fontSize: "13px", fontWeight: 600, 
+                        textDecoration: "none", transition: "all 0.2s", textAlign: "center"
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-accent)"; e.currentTarget.style.color = "var(--color-accent)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = "var(--color-navy)"; }}
+                    >
+                      Silakan kontak kami
+                    </a>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Font Size Dropdown */}
             <div style={{ position: "relative" }}>
