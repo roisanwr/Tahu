@@ -1,128 +1,265 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Dashboard Credit Score",
-  description: "Hasil credit scoring UMKM — breakdown per dimensi dan rekomendasi pinjaman",
+import { useRef } from "react";
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
+import { ArrowLeft, Download, BarChart2, TrendingUp, MapPin, FileCheck, Activity } from "lucide-react";
+import Link from "next/link";
+import { use } from "react";
+
+import { CreditGauge }       from "../../../components/dashboard/CreditGauge";
+import { DashboardHeader }    from "../../../components/dashboard/DashboardHeader";
+import { SubScoreCard }       from "../../../components/dashboard/SubScoreCard";
+import { LoanBanner }         from "../../../components/dashboard/LoanBanner";
+import { RiskBadge }          from "../../../components/dashboard/RiskBadge";
+import { RadarChart }         from "../../../components/dashboard/RadarChart";
+import { ScoreBreakdownBar }  from "../../../components/dashboard/ScoreBreakdownBar";
+import { AIExplanationCard }  from "../../../components/dashboard/AIExplanationCard";
+
+gsap.registerPlugin(useGSAP);
+
+// ─── Mock data (diganti API real nanti) ──────────────────────────────────────
+const MOCK_DATA = {
+  umkmName: "Warung Sembako Bu Sari",
+  sessionDate: "23 April 2026",
+  creditScore: 712,
+  subScores: {
+    financial:    { score: 72, weight: "35%" },
+    experience:   { score: 65, weight: "20%" },
+    location:     { score: 78, weight: "15%" },
+    document:     { score: 80, weight: "15%" },
+    character:    { score: 60, weight: "15%" },
+  },
+  loanAmount: "Rp 28.400.000",
+  isEligible: true,
+  explanation:
+    "Berdasarkan analisis menyeluruh terhadap data wawancara dan dokumen yang diunggah, bisnis Warung Sembako Bu Sari menunjukkan profil kredit yang cukup kuat dengan skor 712. Kekuatan utama terletak pada konsistensi dokumen usaha (skor 80/100) dan lokasi strategis (78/100). Arus kas bulanan yang stabil di kisaran Rp 12–15 juta menjadi fondasi yang baik. Saran utama: tingkatkan kelengkapan catatan keuangan digital untuk membuka akses plafon yang lebih tinggi.",
 };
 
-interface DashboardPageProps {
+// Radar data
+const radarData = [
+  { dimension: "Finansial", score: MOCK_DATA.subScores.financial.score, fullMark: 100 },
+  { dimension: "Pengalaman", score: MOCK_DATA.subScores.experience.score, fullMark: 100 },
+  { dimension: "Lokasi", score: MOCK_DATA.subScores.location.score, fullMark: 100 },
+  { dimension: "Dokumen", score: MOCK_DATA.subScores.document.score, fullMark: 100 },
+  { dimension: "Karakter", score: MOCK_DATA.subScores.character.score, fullMark: 100 },
+];
+
+// Breakdown bars config
+const breakdownBars = [
+  { label: "Kapasitas Finansial",  score: MOCK_DATA.subScores.financial.score,  weight: "35%", icon: "💰", color: "#3B82F6", trackColor: "#EFF6FF" },
+  { label: "Rekam Jejak Usaha",    score: MOCK_DATA.subScores.experience.score, weight: "20%", icon: "🏪", color: "#8B5CF6", trackColor: "#F5F3FF" },
+  { label: "Kestrategisan Lokasi", score: MOCK_DATA.subScores.location.score,   weight: "15%", icon: "📍", color: "#10B981", trackColor: "#ECFDF5" },
+  { label: "Validitas Dokumen",    score: MOCK_DATA.subScores.document.score,   weight: "15%", icon: "📄", color: "#F59E0B", trackColor: "#FFFBEB" },
+  { label: "Profil Karakter",      score: MOCK_DATA.subScores.character.score,  weight: "15%", icon: "🤝", color: "#EC4899", trackColor: "#FDF2F8" },
+];
+
+// SubScore cards
+const metricCards = [
+  { id: 1, title: "Kekuatan Cashflow",  value: "Stabil",         score: MOCK_DATA.subScores.financial.score,  status: "good"    as const, icon: TrendingUp  },
+  { id: 2, title: "Potensi Lokasi",     value: "Strategis",      score: MOCK_DATA.subScores.location.score,   status: "good"    as const, icon: MapPin      },
+  { id: 3, title: "Rekam Jejak",        value: "Cukup Baik",     score: MOCK_DATA.subScores.experience.score, status: "info"    as const, icon: BarChart2   },
+  { id: 4, title: "Validitas Berkas",   value: "Terverifikasi",  score: MOCK_DATA.subScores.document.score,   status: "good"    as const, icon: FileCheck   },
+  { id: 5, title: "Profil Karakter",    value: "Perlu Diperkuat", score: MOCK_DATA.subScores.character.score, status: "warning" as const, icon: Activity    },
+];
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+interface PageProps {
   params: Promise<{ session_id: string }>;
 }
 
-/**
- * Dashboard Page — Halaman hasil credit scoring
- *
- * Komponen penuh (Speedometer, Radar Chart, Breakdown Cards, PDF Export)
- * akan diimplementasikan di Day 7.
- *
- * Saat ini menampilkan shell layout yang sudah final.
- */
-export default async function DashboardPage({ params }: DashboardPageProps) {
-  const { session_id } = await params;
+export default function SessionDashboardPage({ params }: PageProps) {
+  const { session_id } = use(params);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+    tl.fromTo(".dash-top",
+      { opacity: 0, y: -16 },
+      { opacity: 1, y: 0, duration: 0.5 }
+    )
+    .fromTo(".dash-gauge",
+      { opacity: 0, scale: 0.92 },
+      { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.2)" },
+      "-=0.2"
+    )
+    .fromTo(".dash-card",
+      { opacity: 0, y: 18 },
+      { opacity: 1, y: 0, duration: 0.45, stagger: 0.09 },
+      "-=0.2"
+    )
+    .fromTo(".dash-section",
+      { opacity: 0, y: 24 },
+      { opacity: 1, y: 0, duration: 0.5, stagger: 0.1 },
+      "-=0.1"
+    );
+  }, { scope: containerRef });
 
   return (
-    <div className="min-h-screen px-4 py-8 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <Link
-            href="/chat"
-            className="text-xs text-slate-500 hover:text-slate-300 transition-colors mb-2 inline-block"
-          >
-            ← Kembali ke Wawancara
-          </Link>
-          <h1 className="text-2xl font-bold text-slate-100" style={{ fontFamily: "var(--font-sora)" }}>
-            Hasil Credit Scoring
-          </h1>
-          <p className="text-xs text-slate-500 mt-1 font-mono">
-            Session: {session_id}
-          </p>
-        </div>
-        <button
-          id="btn-export-pdf"
-          disabled
-          className="px-4 py-2 rounded-lg border border-slate-700 text-sm text-slate-400 cursor-not-allowed opacity-40"
+    <div style={{ display: "flex", flexDirection: "column", width: "100%", minHeight: "100vh", backgroundColor: "var(--color-bg)" }}>
+      <DashboardHeader />
+
+      <main style={{ display: "flex", flex: 1, justifyContent: "center", width: "100%" }}>
+        <div
+          ref={containerRef}
+          style={{
+            flex: 1,
+            maxWidth: 960,
+            width: "100%",
+            borderLeft: "1px solid var(--color-border)",
+            borderRight: "1px solid var(--color-border)",
+            padding: "28px 24px 64px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 32,
+          }}
         >
-          📄 Export PDF (Day 7)
-        </button>
-      </div>
 
-      {/* Score Card Placeholder */}
-      <div className="grid lg:grid-cols-3 gap-6 mb-8">
-        {/* Main Score */}
-        <div className="glass-card p-8 flex flex-col items-center justify-center lg:col-span-1">
-          {/* Speedometer placeholder */}
-          <div className="w-40 h-40 rounded-full border-4 border-slate-700 flex flex-col items-center justify-center mb-4 relative">
-            <div className="text-4xl font-extrabold gradient-text" style={{ fontFamily: "var(--font-sora)" }}>
-              —
-            </div>
-            <div className="text-xs text-slate-500">Credit Score</div>
-          </div>
-          <div className="text-sm font-medium text-slate-400 px-4 py-1.5 rounded-full border border-slate-700 bg-slate-900">
-            Menunggu Hasil Wawancara
-          </div>
-          <p className="text-xs text-slate-600 mt-3 text-center">
-            Speedometer interaktif tersedia Day 7
-          </p>
-        </div>
-
-        {/* Sub-scores Grid */}
-        <div className="lg:col-span-2 grid grid-cols-2 gap-4">
-          {[
-            { label: "Finansial", weight: "35%", icon: "💰", color: "from-blue-500 to-indigo-500" },
-            { label: "Pengalaman", weight: "20%", icon: "🏪", color: "from-violet-500 to-purple-500" },
-            { label: "Lokasi", weight: "15%", icon: "📍", color: "from-emerald-500 to-teal-500" },
-            { label: "Dokumen", weight: "15%", icon: "📄", color: "from-amber-500 to-orange-500" },
-            { label: "Karakter", weight: "15%", icon: "🤝", color: "from-pink-500 to-rose-500" },
-          ].map((dim) => (
-            <div key={dim.label} className="glass-card p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span>{dim.icon}</span>
-                <span className="text-sm font-medium text-slate-200">{dim.label}</span>
-                <span className="ml-auto text-xs text-slate-500">{dim.weight}</span>
+          {/* ── Top Bar ─────────────────────────────────────────────────── */}
+          <div className="dash-top" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, opacity: 0 }}>
+            <div>
+              <Link
+                href="/chat"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  fontSize: 12, fontWeight: 600, color: "var(--color-text-muted)",
+                  marginBottom: 10, transition: "color 0.2s",
+                  textDecoration: "none",
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--color-accent)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--color-text-muted)"}
+              >
+                <ArrowLeft size={13} strokeWidth={2.5} />
+                Kembali ke Wawancara
+              </Link>
+              <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--color-navy)", margin: 0, letterSpacing: "-0.4px" }}>
+                {MOCK_DATA.umkmName}
+              </h1>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+                <RiskBadge score={MOCK_DATA.creditScore} />
+                <span style={{ fontSize: 11, color: "var(--color-text-muted)", fontFamily: "monospace" }}>
+                  Sesi #{session_id} · {MOCK_DATA.sessionDate}
+                </span>
               </div>
-              <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                <div className={`h-full w-0 bg-gradient-to-r ${dim.color} rounded-full`} />
-              </div>
-              <div className="text-right text-xs text-slate-600 mt-1">— / 100</div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Radar Chart Placeholder */}
-      <div className="glass-card p-6 mb-6">
-        <h2 className="text-lg font-semibold text-slate-200 mb-4" style={{ fontFamily: "var(--font-sora)" }}>
-          Radar Chart — Semua Dimensi
-        </h2>
-        <div className="h-48 flex items-center justify-center text-slate-600 text-sm border border-dashed border-slate-700 rounded-xl">
-          Recharts Spider Chart tersedia mulai Day 7
-        </div>
-      </div>
+            <button
+              id="btn-export-pdf"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 7,
+                padding: "10px 18px",
+                background: "var(--color-surface)",
+                border: "1.5px solid var(--color-border)",
+                borderRadius: 10,
+                fontSize: 13, fontWeight: 700,
+                color: "var(--color-navy)",
+                cursor: "pointer",
+                flexShrink: 0,
+                transition: "all 0.2s",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = "var(--color-accent)";
+                e.currentTarget.style.color = "var(--color-accent)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = "var(--color-border)";
+                e.currentTarget.style.color = "var(--color-navy)";
+              }}
+              onClick={() => alert("Ekspor PDF akan tersedia setelah backend terhubung.")}
+            >
+              <Download size={15} strokeWidth={2.5} />
+              Ekspor PDF
+            </button>
+          </div>
 
-      {/* Loan Recommendation Placeholder */}
-      <div className="glass-card p-6">
-        <h2 className="text-lg font-semibold text-slate-200 mb-4" style={{ fontFamily: "var(--font-sora)" }}>
-          Rekomendasi Pinjaman
-        </h2>
-        <div className="grid sm:grid-cols-3 gap-4">
-          {[
-            { label: "Plafon Maksimal", value: "—", icon: "💵" },
-            { label: "Tenor Disarankan", value: "—", icon: "📅" },
-            { label: "Kisaran Bunga", value: "—", icon: "%" },
-          ].map((item) => (
-            <div key={item.label} className="bg-slate-900 rounded-xl p-4 border border-slate-800">
-              <div className="text-xl mb-2">{item.icon}</div>
-              <div className="text-xs text-slate-500 mb-1">{item.label}</div>
-              <div className="text-xl font-bold text-slate-300">{item.value}</div>
+          {/* ── Gauge + Quick Metrics ───────────────────────────────────── */}
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 24, alignItems: "start" }}>
+            {/* Gauge */}
+            <div className="dash-gauge" style={{ opacity: 0 }}>
+              <CreditGauge score={MOCK_DATA.creditScore} maxScore={850} />
             </div>
-          ))}
+
+            {/* 5 Metric Cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+              {metricCards.map(m => (
+                <div key={m.id} className="dash-card" style={{ opacity: 0 }}>
+                  <SubScoreCard
+                    title={m.title}
+                    value={m.value}
+                    score={m.score}
+                    status={m.status}
+                    icon={m.icon}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Score Breakdown ─────────────────────────────────────────── */}
+          <div className="dash-section" style={{ opacity: 0 }}>
+            <SectionTitle>Rincian Skor per Dimensi</SectionTitle>
+            <div style={{
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              borderRadius: 20,
+              padding: 24,
+            }}>
+              <ScoreBreakdownBar subScores={breakdownBars} />
+            </div>
+          </div>
+
+          {/* ── Radar Chart ─────────────────────────────────────────────── */}
+          <div className="dash-section" style={{ opacity: 0 }}>
+            <SectionTitle>Profil Radar Kredit</SectionTitle>
+            <div style={{
+              background: "var(--color-surface)",
+              border: "1px solid var(--color-border)",
+              borderRadius: 20,
+              padding: "24px 24px 12px",
+            }}>
+              <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "0 0 16px", lineHeight: 1.5 }}>
+                Visualisasi keseimbangan 5 dimensi penilaian kredit. Semakin luas area poligon, semakin kuat profil kredit Anda.
+              </p>
+              <RadarChart data={radarData} />
+            </div>
+          </div>
+
+          {/* ── AI Explanation ──────────────────────────────────────────── */}
+          <div className="dash-section" style={{ opacity: 0 }}>
+            <SectionTitle>Penjelasan AI</SectionTitle>
+            <AIExplanationCard
+              score={MOCK_DATA.creditScore}
+              riskLabel="Risiko Rendah"
+              explanation={MOCK_DATA.explanation}
+            />
+          </div>
+
+          {/* ── Loan Banner ─────────────────────────────────────────────── */}
+          <div className="dash-section" style={{ opacity: 0 }}>
+            <SectionTitle>Rekomendasi Pinjaman</SectionTitle>
+            <LoanBanner amount={MOCK_DATA.loanAmount} isEligible={MOCK_DATA.isEligible} />
+          </div>
+
         </div>
-        <p className="text-xs text-slate-600 mt-4">
-          Data rekomendasi akan terisi setelah wawancara selesai (Day 6–7)
-        </p>
-      </div>
+      </main>
     </div>
+  );
+}
+
+// ─── Helper — Section title ───────────────────────────────────────────────────
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 style={{
+      fontSize: 13,
+      fontWeight: 800,
+      color: "var(--color-text-muted)",
+      textTransform: "uppercase",
+      letterSpacing: "0.08em",
+      margin: "0 0 12px",
+    }}>
+      {children}
+    </h2>
   );
 }

@@ -5,16 +5,17 @@ import { TahuLogo } from "../icons/TahuLogo";
 interface ChatBubbleProps {
   message: Message;
   fontSize: string;
-  onWidgetAction?: (type: "location" | "upload", data?: any) => void;
+  onWidgetAction?:   (type: "location" | "upload", data?: unknown) => void;
+  onOpenMapSheet?:   () => void;
 }
 
-export function ChatBubble({ message, fontSize, onWidgetAction }: ChatBubbleProps) {
+export function ChatBubble({ message, fontSize, onWidgetAction, onOpenMapSheet }: ChatBubbleProps) {
   const isUser = message.sender === "user";
 
   return (
-    <div 
-      className="gsap-bubble" 
-      data-sender={message.sender} 
+    <div
+      className="gsap-bubble"
+      data-sender={message.sender}
       style={{ display: "flex", alignItems: "flex-end", gap: 8, justifyContent: isUser ? "flex-end" : "flex-start", opacity: 0 }}
     >
       {!isUser && <TahuLogo size={28} />}
@@ -29,11 +30,15 @@ export function ChatBubble({ message, fontSize, onWidgetAction }: ChatBubbleProp
           color: isUser ? "var(--color-navy)" : "var(--color-text-primary)",
           border: isUser ? "none" : "1px solid var(--color-border)",
           boxShadow: isUser ? "none" : "0 1px 4px rgba(0,0,0,0.04)",
-          borderRadius: isUser ? "14px 14px 4px 14px" : "14px 14px 14px 4px"
+          borderRadius: isUser ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
         }}>
-          {message.text && <div style={{ marginBottom: message.widget && message.widget !== "none" ? "12px" : "0" }}>{message.text}</div>}
+          {message.text && (
+            <div style={{ marginBottom: message.widget && message.widget !== "none" ? "12px" : "0" }}>
+              {message.text}
+            </div>
+          )}
 
-          {/* Location Request Widget */}
+          {/* ── Location Request Widget ─────────────────────────────── */}
           {message.widget === "location_request" && (
             <div style={{ marginTop: 8, padding: 12, border: "1px solid var(--color-border)", borderRadius: 8, backgroundColor: "var(--color-bg)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -43,15 +48,18 @@ export function ChatBubble({ message, fontSize, onWidgetAction }: ChatBubbleProp
                 <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-navy)" }}>Bagikan Lokasi Usaha</span>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button 
-                  onClick={() => onWidgetAction?.("location", { address: "Jl. Sudirman No 123, Jakarta Selatan", lat: -6.2, lng: 106.8 })}
+                <button
+                  onClick={() => onWidgetAction?.("location", { address: "Lokasi Saat Ini (GPS)", lat: -6.2, lng: 106.8 })}
                   style={{ flex: 1, padding: "8px", background: "var(--color-accent)", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
                 >
                   <MapPin size={14} /> Saat Ini
                 </button>
-                <button 
-                  onClick={() => alert("Membuka Peta Google Maps Manual...")}
-                  style={{ flex: 1, padding: "8px", background: "transparent", color: "var(--color-navy)", border: "1px solid var(--color-border)", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
+                {/* NOW triggers MapBottomSheet instead of alert() */}
+                <button
+                  onClick={() => onOpenMapSheet?.()}
+                  style={{ flex: 1, padding: "8px", background: "transparent", color: "var(--color-navy)", border: "1px solid var(--color-border)", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, transition: "all 0.2s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--color-accent)"; e.currentTarget.style.color = "var(--color-accent)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = "var(--color-navy)"; }}
                 >
                   <Map size={14} /> Buka Peta
                 </button>
@@ -59,47 +67,72 @@ export function ChatBubble({ message, fontSize, onWidgetAction }: ChatBubbleProp
             </div>
           )}
 
-          {/* Location Result */}
+          {/* ── Location Result ─────────────────────────────────────── */}
           {message.widget === "location_result" && message.locationData && (
-             <div style={{ padding: 12, background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 12, display: "flex", flexDirection: "column", gap: 8, minWidth: 200 }}>
-                <div style={{ width: "100%", height: 100, background: "#E2E8F0", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8" }}>
-                  [Mini Peta]
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                  <MapPin size={14} strokeWidth={2.5} color="var(--color-accent)" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-navy)", lineHeight: 1.4 }}>{message.locationData.address}</span>
-                </div>
-             </div>
-          )}
-
-          {/* Upload Request Widget */}
-          {message.widget === "upload_request" && (
-            <div 
-              onClick={() => onWidgetAction?.("upload", { text: "Berikut foto struk nota penjualannya.", url: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=400&q=80" })}
-              style={{ marginTop: 8, padding: 24, border: "2px dashed var(--color-border)", borderRadius: 12, backgroundColor: "var(--color-bg)", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, cursor: "pointer", transition: "border-color 0.2s" }}
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--color-accent)"}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--color-border)"}
-            >
-               <Camera size={32} color="var(--color-text-muted)" />
-               <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-navy)" }}>Tap untuk Buka Kamera</span>
+            <div style={{ padding: 12, background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 12, display: "flex", flexDirection: "column", gap: 8, minWidth: 200 }}>
+              <div style={{ width: "100%", height: 80, borderRadius: 8, border: "1px solid var(--color-border)", overflow: "hidden" }}>
+                <iframe
+                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${message.locationData.lng - 0.006},${message.locationData.lat - 0.004},${message.locationData.lng + 0.006},${message.locationData.lat + 0.004}&layer=mapnik&marker=${message.locationData.lat},${message.locationData.lng}`}
+                  style={{ width: "100%", height: "100%", border: "none" }}
+                  title="Mini Map"
+                  loading="lazy"
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                <MapPin size={14} strokeWidth={2.5} color="var(--color-accent)" style={{ marginTop: 2, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-navy)", lineHeight: 1.4 }}>
+                  {message.locationData.address}
+                </span>
+              </div>
             </div>
           )}
 
-          {/* Image Result */}
+          {/* ── Upload Request Widget ───────────────────────────────── */}
+          {message.widget === "upload_request" && (
+            <div
+              style={{ marginTop: 8, padding: 24, border: "2px dashed var(--color-border)", borderRadius: 12, backgroundColor: "var(--color-bg)", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, cursor: "pointer", transition: "border-color 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = "var(--color-accent)"}
+              onMouseLeave={e => e.currentTarget.style.borderColor = "var(--color-border)"}
+              onClick={() => {
+                // Trigger the hidden file input in ChatInput via a custom event
+                const ev = new CustomEvent("tahu:trigger-file-upload");
+                window.dispatchEvent(ev);
+              }}
+            >
+              <Camera size={32} color="var(--color-text-muted)" />
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-navy)" }}>Tap untuk Pilih / Ambil Foto</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 3 }}>Nota, struk, buku kas, atau KTP</div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Image Result ────────────────────────────────────────── */}
           {message.widget === "image_result" && message.attachmentUrl && (
-             <div style={{ borderRadius: 8, overflow: "hidden", marginTop: message.text ? 8 : 0, maxWidth: 240, border: "1px solid var(--color-border)" }}>
-                <img src={message.attachmentUrl} alt="Uploaded" style={{ width: "100%", height: "auto", display: "block" }} />
-             </div>
+            <div style={{ borderRadius: 10, overflow: "hidden", marginTop: message.text ? 8 : 0, maxWidth: 240, border: "1px solid var(--color-border)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={message.attachmentUrl} alt="Uploaded" style={{ width: "100%", height: "auto", display: "block" }} />
+              <div style={{ padding: "6px 10px", background: "var(--color-accent-light)", display: "flex", alignItems: "center", gap: 6 }}>
+                <FileImage size={12} color="var(--color-accent)" />
+                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-accent-dark)" }}>Dokumen diterima</span>
+              </div>
+            </div>
           )}
 
         </div>
+
         <span style={{ fontSize: 10, color: "var(--color-text-muted)", margin: "0 4px" }}>
           {message.time}
         </span>
       </div>
 
       {isUser && (
-        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--color-surface)", border: "1px solid var(--color-border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-primary)", flexShrink: 0 }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: "50%",
+          background: "var(--color-surface)", border: "1px solid var(--color-border)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "var(--color-text-primary)", flexShrink: 0,
+        }}>
           <User size={14} strokeWidth={2} />
         </div>
       )}

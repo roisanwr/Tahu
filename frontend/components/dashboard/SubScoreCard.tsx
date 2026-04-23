@@ -5,12 +5,13 @@ import { LucideIcon } from "lucide-react";
 interface SubScoreCardProps {
   title: string;
   value: string;
+  score?: number; // 0–100
   status: "good" | "warning" | "bad" | "info";
   icon: LucideIcon;
   delay?: number;
 }
 
-export function SubScoreCard({ title, value, status, icon: Icon, delay = 0 }: SubScoreCardProps) {
+export function SubScoreCard({ title, value, score, status, icon: Icon, delay = 0 }: SubScoreCardProps) {
   const getStatusStyle = () => {
     switch (status) {
       case "good": return { bg: "#E8F5EF", color: "#10B981" };
@@ -42,13 +43,20 @@ export function SubScoreCard({ title, value, status, icon: Icon, delay = 0 }: Su
         <Icon size={20} strokeWidth={2.5} />
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-muted)", lineHeight: 1.2 }}>
           {title}
         </span>
-        <span style={{ fontSize: 16, fontWeight: 800, color: "var(--color-navy)", lineHeight: 1.2 }}>
-          {value}
-        </span>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 15, fontWeight: 800, color: "var(--color-navy)", lineHeight: 1.2 }}>
+            {value}
+          </span>
+          {score !== undefined && (
+            <span style={{ fontSize: 13, fontWeight: 700, color: style.color, fontVariantNumeric: "tabular-nums" }}>
+              {score}<span style={{ fontSize: 10, fontWeight: 500, color: "var(--color-text-muted)" }}>/100</span>
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
