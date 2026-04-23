@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkorKu — Kredit Scoring UMKM Berbasis AI</title>
+  
+  <!-- Google Fonts: Inter & Playfair Display -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  
+  <!-- UPGRADE: Phosphor Icons untuk menggantikan emoji agar lebih profesional -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <style>
+    /* ===== DESIGN TOKENS ===== */
+    :root {
+      --color-bg: #F8FAF9;
+      --color-surface: #FFFFFF;
+      --color-text-primary: #111827;
+      --color-text-secondary: #4B5563;
+      --color-text-muted: #9CA3AF;
+      --color-accent: #059669; /* Emerald yang lebih tajam dan modern */
+      --color-accent-light: #D1FAE5;
+      --color-accent-dark: #047857;
+      --color-accent-glow: rgba(5, 150, 105, 0.4);
+      --color-navy: #0F172A; /* Slate gelap untuk kesan tech yang elegan */
+      --color-border: #E5E7EB;
+      --color-border-light: #F3F4F6;
+      --color-warm-gray: #F9FAFB;
+
+      /* Typography Scale */
+      --text-xs: 0.75rem; --text-sm: 0.875rem; --text-base: 1rem;
+      --text-lg: 1.125rem; --text-xl: 1.25rem; --text-2xl: 1.563rem;
+      --text-3xl: 1.953rem; --text-4xl: 2.441rem; --text-5xl: 3.052rem;
+      --text-display: 4rem;
+
+      /* Spacing Scale */
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem;
+      --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem;
+      --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem;
+      --space-16: 4rem; --space-20: 5rem; --space-24: 6rem;
+      --space-32: 8rem;
+
+      /* Shadows & Radius */
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      --shadow-glow: 0 0 20px var(--color-accent-glow);
+      
+      --radius-sm: 8px; --radius-md: 12px;
+      --radius-lg: 24px; --radius-xl: 32px;
+
+      /* Transitions */
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --duration-fast: 200ms;
+      --duration-normal: 400ms;
+      --duration-slow: 700ms;
+    }
+
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--color-bg);
+      background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
+      background-size: 24px 24px; /* Dot pattern background yang keren */
+      color: var(--color-text-primary);
+      font-size: var(--text-base);
+      line-height: 1.7;
+      overflow-x: hidden;
+      position: relative;
+    }
+    /* Ambient Glow di background atas */
+    body::before {
+      content: '';
+      position: absolute;
+      top: -10%; left: 50%;
+      transform: translateX(-50%);
+      width: 80vw; height: 50vh;
+      background: radial-gradient(ellipse, rgba(5, 150, 105, 0.15) 0%, transparent 60%);
+      z-index: -1; pointer-events: none;
+    }
+
+    img { max-width: 100%; display: block; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ===== UTILITY ===== */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 var(--space-6); }
+    .text-center { text-align: center; }
+
+    /* ===== FADE-IN ANIMATION ===== */
+    .fade-in {
+      opacity: 0; transform: translateY(30px);
+      transition: opacity var(--duration-slow) var(--ease-out), transform var(--duration-slow) var(--ease-out);
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ===== NAVBAR (GLASSMORPHISM) ===== */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: var(--space-5) 0;
+      background: rgba(248, 250, 249, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+      transition: padding var(--duration-normal) var(--ease-out), background var(--duration-normal);
+    }
+    .navbar.scrolled { padding: var(--space-3) 0; background: rgba(255, 255, 255, 0.9); box-shadow: var(--shadow-sm); }
+    .navbar .container { display: flex; align-items: center; justify-content: space-between; }
+    .navbar-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: var(--text-2xl); font-weight: 700;
+      color: var(--color-navy); letter-spacing: -0.02em;
+    }
+    .navbar-logo span { color: var(--color-accent); }
+    .navbar-links { display: flex; gap: var(--space-8); align-items: center; }
+    .navbar-links a {
+      font-size: var(--text-sm); font-weight: 600;
+      color: var(--color-text-secondary); transition: color var(--duration-fast);
+    }
+    .navbar-links a:hover { color: var(--color-accent); }
+    
+    /* Buttons dengan efek glow & pop */
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-3) var(--space-8);
+      background: var(--color-accent); color: #fff;
+      font-size: var(--text-sm); font-weight: 600;
+      border-radius: 100px; border: none; cursor: pointer;
+      box-shadow: 0 4px 14px 0 var(--color-accent-glow);
+      transition: all var(--duration-fast) var(--ease-bounce);
+    }
+    .btn-primary:hover { 
+      background: var(--color-accent-dark); 
+      transform: translateY(-3px) scale(1.02); 
+      box-shadow: 0 6px 20px 0 rgba(4, 120, 87, 0.4);
+    }
+    
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-3) var(--space-8);
+      background: var(--color-surface); color: var(--color-navy);
+      font-size: var(--text-sm); font-weight: 600;
+      border-radius: 100px; border: 1px solid var(--color-border);
+      cursor: pointer; transition: all var(--duration-fast) var(--ease-bounce);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-secondary:hover { 
+      border-color: var(--color-accent); color: var(--color-accent);
+      transform: translateY(-3px); box-shadow: var(--shadow-md);
+    }
+
+    /* ===== HERO (OVERHAUL MAKSIMAL) ===== */
+    .hero-split {
+      padding: calc(var(--space-32) + var(--space-16)) 0 var(--space-20);
+      display: grid; grid-template-columns: 1.1fr 0.9fr; /* Rasio asimetris agar lebih dinamis */
+      align-items: center; gap: var(--space-16);
+      position: relative;
+    }
+    .hero-content { text-align: left; z-index: 2; }
+    
+    /* Badge Animasi */
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: #FFFFFF; color: var(--color-accent);
+      font-size: var(--text-xs); font-weight: 700;
+      border-radius: 100px; letter-spacing: 0.05em;
+      text-transform: uppercase; margin-bottom: var(--space-6);
+      box-shadow: var(--shadow-md); border: 1px solid var(--color-border-light);
+      animation: pulse-soft 2s infinite;
+    }
+    @keyframes pulse-soft {
+      0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.2); }
+      70% { box-shadow: 0 0 0 10px rgba(5, 150, 105, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+    }
+
+    .hero-content h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: var(--text-display); font-weight: 700;
+      line-height: 1.05; letter-spacing: -0.04em;
+      color: var(--color-navy); margin-bottom: var(--space-6);
+    }
+    .hero-content h1 span { 
+      background: linear-gradient(135deg, var(--color-accent), #10B981);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+    }
+    .hero-content p {
+      font-size: var(--text-xl); color: var(--color-text-secondary);
+      margin-bottom: var(--space-10); line-height: 1.7; max-width: 520px;
+    }
+    .hero-actions { display: flex; gap: var(--space-4); justify-content: flex-start; flex-wrap: wrap; }
+    
+    /* Visual & Floating UI Elements */
+    .hero-visual {
+      position: relative; z-index: 1; perspective: 1000px;
+    }
+    .hero-visual-main {
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      transform: rotateY(-5deg) rotateX(5deg);
+      transition: transform 0.5s var(--ease-out);
+      border: 8px solid white;
+    }
+    .hero-visual:hover .hero-visual-main { transform: rotateY(0deg) rotateX(0deg); }
+    
+    /* Elemen UI Melayang 1 (Kiri Atas) */
+    .floating-card-1 {
+      position: absolute; top: -20px; left: -40px;
+      background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px);
+      padding: var(--space-4); border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg); border: 1px solid rgba(255,255,255,0.5);
+      display: flex; align-items: center; gap: var(--space-3);
+      animation: float-alt 5s ease-in-out infinite alternate;
+    }
+    .fc-icon { 
+      width: 40px; height: 40px; background: var(--color-accent-light); 
+      color: var(--color-accent); border-radius: 50%; 
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .fc-text h4 { font-size: var(--text-sm); color: var(--color-navy); font-weight: 700; margin-bottom: 2px;}
+    .fc-text p { font-size: var(--text-xs); color: var(--color-text-muted); }
+    
+    /* Elemen UI Melayang 2 (Kanan Bawah) */
+    .floating-card-2 {
+      position: absolute; bottom: 30px; right: -30px;
+      background: #0F172A; color: white;
+      padding: var(--space-5); border-radius: var(--radius-lg);
+      box-shadow: 0 15px 30px rgba(15, 23, 42, 0.3);
+      animation: float 6s ease-in-out infinite; border: 1px solid #1E293B;
+    }
+    .fc2-score { font-family: 'Playfair Display', serif; font-size: var(--text-3xl); font-weight: 700; color: #34D399; line-height: 1; margin-bottom: 4px;}
+    .fc2-label { font-size: var(--text-xs); color: #94A3B8; letter-spacing: 0.05em; text-transform: uppercase;}
+
+    @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
+    @keyframes float-alt { 0% { transform: translateY(0px) rotate(-2deg); } 100% { transform: translateY(15px) rotate(2deg); } }
+
+    /* ===== SOCIAL PROOF (GLASSMORPHISM WRAPPER) ===== */
+    .social-proof { padding: var(--space-12) 0 var(--space-20); position: relative; }
+    .sp-glass-container {
+      background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px);
+      border: 1px solid var(--color-surface); box-shadow: var(--shadow-lg);
+      border-radius: var(--radius-xl); padding: var(--space-10) var(--space-6);
+      margin-top: -40px; position: relative; z-index: 10;
+    }
+    .social-proof-label {
+      font-size: var(--text-xs); font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--color-text-muted); margin-bottom: var(--space-8);
+      text-align: center;
+    }
+    .proof-stats { display: flex; justify-content: space-around; flex-wrap: wrap; gap: var(--space-8); }
+    .proof-stat-item { text-align: center; }
+    .proof-stat-number {
+      font-family: 'Playfair Display', serif; font-size: var(--text-4xl);
+      font-weight: 700; color: var(--color-navy); line-height: 1.2;
+    }
+    .proof-stat-label { font-size: var(--text-sm); font-weight: 500; color: var(--color-text-secondary); margin-top: var(--space-1); }
+    
+    .trust-badges {
+      display: flex; justify-content: center; align-items: center;
+      gap: var(--space-16); margin-top: var(--space-12);
+      padding-top: var(--space-10); border-top: 1px solid var(--color-border);
+      flex-wrap: wrap;
+    }
+    .trust-logo {
+      font-family: 'Inter', sans-serif; font-size: var(--text-xl);
+      font-weight: 800; color: #D1D5DB; letter-spacing: -0.02em; 
+      display: flex; align-items: center; gap: 8px;
+      transition: all 0.3s;
+    }
+    .trust-logo:hover { color: var(--color-navy); transform: scale(1.05); }
+
+    /* ===== HOW IT WORKS (KARTU DINAMIS) ===== */
+    .section-hiw { padding: var(--space-20) 0; position: relative; }
+    .section-label {
+      display: inline-block; padding: 4px 12px; background: var(--color-accent-light);
+      color: var(--color-accent); font-size: var(--text-xs); font-weight: 700;
+      border-radius: 100px; text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: var(--space-6);
+    }
+    .section-title {
+      font-family: 'Playfair Display', serif; font-size: var(--text-4xl);
+      font-weight: 700; color: var(--color-navy); line-height: 1.15;
+      letter-spacing: -0.02em; margin-bottom: var(--space-4);
+    }
+    .section-subtitle {
+      font-size: var(--text-lg); color: var(--color-text-secondary);
+      max-width: 540px; line-height: 1.7; margin: 0 auto;
+    }
+    
+    .hiw-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-8); margin-top: var(--space-16);
+    }
+    .hiw-card {
+      padding: var(--space-10); background: var(--color-surface);
+      border: 1px solid var(--color-border-light); border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
+      transition: all var(--duration-normal) var(--ease-bounce);
+    }
+    /* Efek garis warna saat di-hover */
+    .hiw-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--color-accent), #34D399);
+      transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease;
+    }
+    .hiw-card:hover { transform: translateY(-10px); box-shadow: var(--shadow-xl); border-color: transparent; }
+    .hiw-card:hover::before { transform: scaleX(1); }
+    
+    .hiw-step {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; background: var(--color-warm-gray);
+      color: var(--color-navy); font-size: var(--text-2xl); font-family: 'Playfair Display', serif;
+      font-weight: 700; border-radius: 50%; margin-bottom: var(--space-6);
+      transition: background 0.3s, color 0.3s;
+    }
+    .hiw-card:hover .hiw-step { background: var(--color-accent); color: white; }
+    .hiw-card h3 { font-size: var(--text-xl); font-weight: 700; color: var(--color-navy); margin-bottom: var(--space-3); }
+    .hiw-card p { font-size: var(--text-sm); color: var(--color-text-secondary); line-height: 1.75; }
+
+    /* ===== FEATURES (HOVER GLOW EFFECTS) ===== */
+    .section-features { padding: var(--space-24) 0; background: var(--color-surface); border-top: 1px solid var(--color-border-light); }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-8); margin-top: var(--space-16);
+    }
+    .feature-card {
+      padding: var(--space-10); background: var(--color-bg);
+      border: 1px solid var(--color-border-light); border-radius: var(--radius-xl);
+      transition: all var(--duration-normal) var(--ease-out);
+      display: flex; gap: var(--space-6); align-items: flex-start;
+    }
+    .feature-card:hover { box-shadow: var(--shadow-lg); background: white; border-color: var(--color-accent-light); transform: translateY(-4px); }
+    .feature-icon {
+      width: 56px; height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      background: var(--color-surface); box-shadow: var(--shadow-sm);
+      border-radius: var(--radius-md); color: var(--color-accent); transition: transform 0.3s;
+    }
+    .feature-card:hover .feature-icon { transform: scale(1.1) rotate(5deg); background: var(--color-accent); color: white; }
+    .feature-icon i { font-size: 28px; }
+    .feature-text h3 { font-size: var(--text-xl); font-weight: 700; color: var(--color-navy); margin-bottom: var(--space-2); }
+    .feature-text p { font-size: var(--text-sm); color: var(--color-text-secondary); line-height: 1.75; }
+    
+    .feature-highlight {
+      grid-column: 1 / -1; display: grid; grid-template-columns: 1.2fr 0.8fr;
+      gap: var(--space-12); align-items: center; padding: var(--space-12) var(--space-16);
+      background: radial-gradient(circle at right, #1E293B, var(--color-navy)); 
+      border-radius: var(--radius-xl); position: relative; overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+    }
+    .feature-highlight h3 { color: #fff; font-size: var(--text-3xl); font-family: 'Playfair Display', serif; margin-bottom: var(--space-4);}
+    .feature-highlight p { color: rgba(255,255,255,0.8); font-size: var(--text-lg); line-height: 1.8; }
+    .feature-highlight-visual {
+      background: rgba(255,255,255,0.05); border-radius: var(--radius-lg);
+      padding: var(--space-10); text-align: center; border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+    }
+    .score-gauge {
+      font-family: 'Playfair Display', serif; font-size: 5rem;
+      font-weight: 700; color: #34D399; line-height: 1;
+      text-shadow: 0 0 30px rgba(52, 211, 153, 0.4);
+    }
+    .score-label { font-size: var(--text-sm); font-weight: 600; color: white; margin-top: var(--space-4); letter-spacing: 0.05em; text-transform: uppercase;}
+
+    /* ===== TESTIMONIALS (MASONRY/CAROUSEL VIBE) ===== */
+    .section-testimonials { padding: var(--space-24) 0; background: var(--color-bg); }
+    .testimonial-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-8); margin-top: var(--space-16);
+    }
+    .testimonial-card {
+      padding: var(--space-10); background: var(--color-surface);
+      border: none; border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md); display: flex; flex-direction: column;
+      position: relative; transition: transform 0.3s;
+    }
+    .testimonial-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-xl); }
+    /* Kutip Ikon besar di background */
+    .testimonial-card::after {
+      content: '"'; position: absolute; top: 20px; right: 30px;
+      font-family: 'Playfair Display', serif; font-size: 80px;
+      color: var(--color-border-light); line-height: 1; opacity: 0.5; z-index: 0; pointer-events: none;
+    }
+    .testimonial-stars { color: #F59E0B; font-size: var(--text-lg); letter-spacing: 2px; margin-bottom: var(--space-6); position: relative; z-index: 1;}
+    .testimonial-card blockquote {
+      font-size: var(--text-base); color: var(--color-text-secondary);
+      line-height: 1.8; margin-bottom: var(--space-8); font-style: italic; flex-grow: 1; position: relative; z-index: 1;
+    }
+    .testimonial-author { display: flex; align-items: center; gap: var(--space-4); position: relative; z-index: 1;}
+    .testimonial-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      overflow: hidden; flex-shrink: 0;
+      border: 3px solid white; box-shadow: var(--shadow-md);
+    }
+    .testimonial-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .testimonial-name { font-size: var(--text-base); font-weight: 700; color: var(--color-navy); }
+    .testimonial-role { font-size: var(--text-sm); color: var(--color-accent); font-weight: 500; }
+
+    /* ===== CTA (DARK MODE BOLD) ===== */
+    .section-cta { padding: var(--space-24) 0 var(--space-16); background: var(--color-bg); }
+    .cta-box {
+      text-align: center; padding: var(--space-24) var(--space-12);
+      background: var(--color-navy);
+      border-radius: 40px; position: relative; overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.4);
+    }
+    /* Dekorasi Lingkaran CTA */
+    .cta-box::before {
+      content: ''; position: absolute; top: -100px; right: -100px;
+      width: 300px; height: 300px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(5, 150, 105, 0.4) 0%, transparent 70%);
+    }
+    .cta-box::after {
+      content: ''; position: absolute; bottom: -100px; left: -100px;
+      width: 300px; height: 300px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(52, 211, 153, 0.2) 0%, transparent 70%);
+    }
+    .cta-box h2 {
+      font-family: 'Playfair Display', serif; font-size: var(--text-5xl);
+      color: #fff; font-weight: 700; margin-bottom: var(--space-6); position: relative; z-index: 2;
+    }
+    .cta-box p {
+      font-size: var(--text-xl); color: rgba(255,255,255,0.7);
+      margin-bottom: var(--space-10); max-width: 600px;
+      margin-left: auto; margin-right: auto; position: relative; z-index: 2;
+    }
+    .cta-buttons { position: relative; z-index: 2; display: flex; gap: var(--space-4); justify-content: center; }
+    .cta-box .btn-primary { background: #10B981; color: white; padding: var(--space-4) var(--space-10); font-size: var(--text-lg); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4); }
+    .cta-box .btn-primary:hover { background: #34D399; color: var(--color-navy); }
+
+    /* ===== FOOTER (ENTERPRISE GRADE) ===== */
+    .site-footer { padding: var(--space-20) 0 var(--space-8); background: var(--color-surface); border-top: 1px solid var(--color-border-light); }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr; gap: var(--space-12); margin-bottom: var(--space-16); }
+    .footer-brand p { font-size: var(--text-base); color: var(--color-text-secondary); margin-top: var(--space-6); line-height: 1.7; max-width: 320px; }
+    
+    .footer-col h4 { font-size: var(--text-base); font-weight: 700; color: var(--color-navy); margin-bottom: var(--space-6); }
+    .footer-col a { display: block; font-size: var(--text-sm); color: var(--color-text-secondary); font-weight: 500; margin-bottom: var(--space-4); transition: color var(--duration-fast); }
+    .footer-col a:hover { color: var(--color-accent); transform: translateX(2px); display: inline-block;}
+    
+    /* Newsletter Form */
+    .newsletter-form { margin-top: var(--space-4); display: flex; gap: var(--space-2); }
+    .newsletter-form input { 
+      padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); 
+      border-radius: var(--radius-sm); font-size: var(--text-sm); width: 100%; outline: none;
+      transition: border-color 0.3s;
+    }
+    .newsletter-form input:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-light); }
+    .newsletter-form button {
+      padding: 0 var(--space-4); background: var(--color-navy); color: white;
+      border: none; border-radius: var(--radius-sm); cursor: pointer; transition: background 0.3s;
+    }
+    .newsletter-form button:hover { background: var(--color-accent); }
+
+    .footer-bottom { 
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: var(--space-8); border-top: 1px solid var(--color-border); 
+      font-size: var(--text-sm); color: var(--color-text-muted); font-weight: 500;
+    }
+    .footer-socials { display: flex; gap: var(--space-4); }
+    .footer-socials a { color: var(--color-text-muted); font-size: 20px; transition: color 0.3s; }
+    .footer-socials a:hover { color: var(--color-accent); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1024px) {
+      .hero-split { grid-template-columns: 1fr; text-align: center; padding-top: var(--space-32); }
+      .hero-content { text-align: center; }
+      .hero-content p { margin-left: auto; margin-right: auto; }
+      .hero-actions { justify-content: center; }
+      .hero-visual { max-width: 80%; margin: 0 auto; margin-top: var(--space-10); }
+      .floating-card-1 { left: 0; }
+      .floating-card-2 { right: 0; }
+      .feature-highlight { grid-template-columns: 1fr; text-align: center; }
+    }
+    @media (max-width: 768px) {
+      .hero-content h1 { font-size: var(--text-4xl); }
+      .proof-stats { flex-direction: column; gap: var(--space-8); }
+      .sp-glass-container { margin-top: var(--space-10); }
+      .hiw-grid, .testimonial-grid, .features-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: var(--space-10); }
+      .navbar-links a:not(.btn-primary) { display: none; }
+      .trust-badges { gap: var(--space-6); }
+      .footer-bottom { flex-direction: column; gap: var(--space-4); text-align: center; }
+    }
+    @media (max-width: 480px) {
+      .footer-grid { grid-template-columns: 1fr; }
+      .cta-buttons { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="#" class="navbar-logo">Skor<span>Ku</span></a>
+      <div class="navbar-links">
+        <a href="#cara-kerja">Cara Kerja</a>
+        <a href="#fitur">Fitur</a>
+        <a href="#testimoni">Testimoni</a>
+        <a href="#" class="btn-primary">Mulai Gratis</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- OVERHAULED HERO -->
+  <section class="hero-split container fade-in">
+    <div class="hero-content">
+      <div class="hero-badge"><i class="ph-fill ph-sparkle"></i> AI Scoring Generasi Baru</div>
+      <h1>Wawancara Cerdas,<br>Skor Kredit <span>Instan.</span></h1>
+      <p>Lupakan tumpukan dokumen yang bikin pusing. Cukup ngobrol dengan AI kami, dan dapatkan profil kredit kelas enterprise dalam hitungan menit.</p>
+      <div class="hero-actions">
+        <a href="#" class="btn-primary">Coba Gratis Sekarang <i class="ph-bold ph-arrow-right"></i></a>
+        <a href="#cara-kerja" class="btn-secondary"><i class="ph-bold ph-play-circle"></i> Lihat Demo</a>
+      </div>
+    </div>
+    
+    <div class="hero-visual">
+      <!-- Floating Card Kiri Atas -->
+      <div class="floating-card-1">
+        <div class="fc-icon"><i class="ph-fill ph-check-circle"></i></div>
+        <div class="fc-text">
+          <h4>Nota Terbaca</h4>
+          <p>Akurasi OCR 99.8%</p>
+        </div>
+      </div>
+      
+      <!-- Gambar Utama -->
+      <img class="hero-visual-main" src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop" alt="Mockup Dashboard SkorKu" loading="lazy">
+      
+      <!-- Floating Card Kanan Bawah -->
+      <div class="floating-card-2">
+        <div class="fc2-score">742</div>
+        <div class="fc2-label">Excellent Score</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OVERHAULED SOCIAL PROOF -->
+  <section class="social-proof fade-in">
+    <div class="container">
+      <div class="sp-glass-container">
+        <p class="social-proof-label">Dipercaya oleh Ekosistem Keuangan Indonesia</p>
+        <div class="proof-stats">
+          <div class="proof-stat-item">
+            <div class="proof-stat-number">12.4K+</div>
+            <div class="proof-stat-label">UMKM Terverifikasi</div>
+          </div>
+          <div class="proof-stat-item">
+            <div class="proof-stat-number">Rp 84M</div>
+            <div class="proof-stat-label">Pinjaman Cair</div>
+          </div>
+          <div class="proof-stat-item">
+            <div class="proof-stat-number">98.5%</div>
+            <div class="proof-stat-label">Tingkat Akurasi</div>
+          </div>
+          <div class="proof-stat-item">
+            <div class="proof-stat-number">&lt;3 Min</div>
+            <div class="proof-stat-label">Rata-rata Waktu</div>
+          </div>
+        </div>
+        
+        <!-- Trust Badges -->
+        <div class="trust-badges">
+          <div class="trust-logo"><i class="ph-fill ph-bank"></i> Bank Indonesia</div>
+          <div class="trust-logo"><i class="ph-fill ph-shield-check"></i> OJK Terdaftar</div>
+          <div class="trust-logo"><i class="ph-fill ph-lock-key"></i> Kominfo ISO27001</div>
+          <div class="trust-logo"><i class="ph-fill ph-credit-card"></i> Visa Partner</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="cara-kerja" class="section-hiw">
+    <div class="container fade-in">
+      <div class="text-center">
+        <div class="section-label">Alur Kerja</div>
+        <h2 class="section-title">Tiga Langkah Menuju<br>Akses Permodalan</h2>
+        <p class="section-subtitle">Teknologi rumit di belakang layar, pengalaman semudah chatting dengan asisten pribadi di layar Anda.</p>
+      </div>
+      <div class="hiw-grid">
+        <div class="hiw-card">
+          <div class="hiw-step">1</div>
+          <h3>Sesi Ngobrol AI</h3>
+          <p>Ceritakan dinamika usaha Anda. AI kami beradaptasi dengan gaya bahasa Anda, menggali metrik penting tanpa terasa seperti diinterogasi.</p>
+        </div>
+        <div class="hiw-card">
+          <div class="hiw-step">2</div>
+          <h3>Snap & Extract</h3>
+          <p>Cukup foto tumpukan struk kasir atau buku catatan manual. *Vision AI* kami langsung mengubahnya menjadi data terstruktur hitungan detik.</p>
+        </div>
+        <div class="hiw-card">
+          <div class="hiw-step">3</div>
+          <h3>Skor Komprehensif</h3>
+          <p>Dapatkan *Scorecard* interaktif. Bukan sekadar angka, tapi laporan lengkap 5 dimensi yang siap diajukan langsung ke mitra perbankan kami.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OVERHAULED FEATURES -->
+  <section id="fitur" class="section-features">
+    <div class="container fade-in">
+      <div class="text-center">
+        <div class="section-label">Fitur Enterprise</div>
+        <h2 class="section-title">Teknologi Cerdas<br>Penilai Risiko</h2>
+        <p class="section-subtitle">Kami menggabungkan data alternatif dan pemrosesan bahasa alami untuk melihat potensi bisnis yang tidak terlihat oleh bank tradisional.</p>
+      </div>
+      
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="ph-fill ph-chats-circle"></i></div>
+          <div class="feature-text">
+            <h3>NLP Conversation</h3>
+            <p>Model bahasa yang dilatih khusus dengan terminologi bisnis lokal Indonesia, menangkap konteks dan sentimen pemilik usaha secara akurat.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="ph-fill ph-scan"></i></div>
+          <div class="feature-text">
+            <h3>Smart Document OCR</h3>
+            <p>Bukan OCR biasa. Sistem mengenali format kwitansi lecek, tulisan tangan, hingga mutasi e-wallet dengan akurasi setingkat manusia.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="ph-fill ph-map-trifold"></i></div>
+          <div class="feature-text">
+            <h3>Geospatial Mapping</h3>
+            <p>Analisis daya beli radius 5km dari titik usaha, trafik pejalan kaki, dan kepadatan kompetitor berbasis data satelit terkini.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="ph-fill ph-fingerprint"></i></div>
+          <div class="feature-text">
+            <h3>Behavioral Biometrics</h3>
+            <p>Menilai tingkat kooperatif, kecepatan respon, dan konsistensi data untuk memitigasi risiko fraud secara *invisible* (tanpa disadari).</p>
+          </div>
+        </div>
+        
+        <!-- Highlight Card yang Epic -->
+        <div class="feature-highlight">
+          <div>
+            <h3>Satu Skor, Ribuan Peluang.</h3>
+            <p>Algoritma SkorKu merangkum 150+ variabel data poin menjadi standar skor 300–850. Skor ini telah diintegrasikan dengan 15+ Bank & P2P Lending top di Indonesia untuk pre-approval instan.</p>
+          </div>
+          <div class="feature-highlight-visual">
+            <div class="score-label">FICO® Alternative Equivalent</div>
+            <div class="score-gauge">742</div>
+            <div class="score-label" style="margin-top:0; color:#34D399;">PROFIL RISIKO RENDAH</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OVERHAULED TESTIMONIALS -->
+  <section id="testimoni" class="section-testimonials">
+    <div class="container fade-in">
+      <div class="text-center">
+        <div class="section-label">Kisah Sukses</div>
+        <h2 class="section-title">Mereka yang Telah Naik Kelas</h2>
+      </div>
+      <div class="testimonial-grid">
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i></div>
+          <blockquote>"Dulu saya bingung cara bikin laporan neraca. Pas pakai SkorKu, saya cuma cerita jualan sehari-hari & foto nota bahan baku. Besoknya langsung di-acc pinjaman 50 Juta!"</blockquote>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">
+              <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=150&auto=format&fit=crop" alt="Bu Sari">
+            </div>
+            <div>
+              <div class="testimonial-name">Bu Sari Rahayu</div>
+              <div class="testimonial-role">Grosir Sembako · Semarang</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i></div>
+          <blockquote>"UI-nya gila sih, kayak pakai aplikasi dari Silicon Valley. Analisis pasarnya jeli banget mendeteksi kalau kafe saya ada di lokasi premium, padahal baru buka 6 bulan."</blockquote>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">
+               <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=150&auto=format&fit=crop" alt="Budi Pratama">
+            </div>
+            <div>
+              <div class="testimonial-name">Budi Pratama</div>
+              <div class="testimonial-role">Owner Kafe · Jakarta Selatan</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars"><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i></div>
+          <blockquote>"Teknologi OCR-nya sangat akurat. Puluhan struk pengiriman barang yang lecek bisa terbaca sempurna dan langsung terkapitalisasi jadi modal kerja baru."</blockquote>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">
+               <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop" alt="Andi Nugroho">
+            </div>
+            <div>
+              <div class="testimonial-name">Andi Nugroho</div>
+              <div class="testimonial-role">Distributor Logistik · Surabaya</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OVERHAULED CTA -->
+  <section class="section-cta">
+    <div class="container fade-in">
+      <div class="cta-box">
+        <h2>Siap Membuka Akses<br>Permodalan Tanpa Batas?</h2>
+        <p>Gabung dengan ekosistem 12.000+ UMKM cerdas. Gratis cek skor kredit Anda hari ini, tanpa komitmen, tanpa biaya tersembunyi.</p>
+        <div class="cta-buttons">
+          <a href="#" class="btn-primary">Mulai Analisis Gratis <i class="ph-bold ph-rocket-launch"></i></a>
+          <a href="#" class="btn-secondary" style="background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.3);">Hubungi Tim Sales</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OVERHAULED FOOTER -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="navbar-logo" style="margin-bottom:0">Skor<span>Ku</span></div>
+          <p>Mendemokratisasi akses finansial di Indonesia melalui kecerdasan buatan dan data alternatif. Solusi cerdas untuk bisnis yang tangguh.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Solusi Kami</h4>
+          <a href="#">Untuk UMKM</a>
+          <a href="#">Untuk Bank & P2P</a>
+          <a href="#">API Dokumentasi</a>
+          <a href="#">Pricing</a>
+        </div>
+        <div class="footer-col">
+          <h4>Perusahaan</h4>
+          <a href="#">Tentang Kami</a>
+          <a href="#">Karir <span style="background:var(--color-accent-light); color:var(--color-accent); font-size:10px; padding:2px 6px; border-radius:4px; margin-left:4px;">We're Hiring</span></a>
+          <a href="#">Blog & Insights</a>
+          <a href="#">Media Kit</a>
+        </div>
+        <div class="footer-col">
+          <h4>Dapatkan Info Terbaru</h4>
+          <p style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: 8px;">Tips bisnis dan update fitur mingguan.</p>
+          <form class="newsletter-form" onsubmit="event.preventDefault();">
+            <input type="email" placeholder="Email usaha Anda..." required>
+            <button type="submit"><i class="ph-bold ph-paper-plane-right"></i></button>
+          </form>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>&copy; 2026 SkorKu Technologies. PT AI Finansial Indonesia.</div>
+        <div class="footer-socials">
+          <a href="#"><i class="ph-fill ph-instagram-logo"></i></a>
+          <a href="#"><i class="ph-fill ph-linkedin-logo"></i></a>
+          <a href="#"><i class="ph-fill ph-twitter-logo"></i></a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Navbar glassmorphism scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // Advanced Intersection Observer for fade-in animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { 
+        if (e.isIntersecting) { 
+          e.target.classList.add('visible'); 
+          // Optional: unobserve if you only want it to animate once
+          // observer.unobserve(e.target); 
+        } 
+      });
+    }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+    
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>
