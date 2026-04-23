@@ -112,7 +112,7 @@ export function useChatLogic() {
     }
   };
 
-  const handleWidgetAction = (type: "location" | "upload", data?: unknown) => {
+  const handleWidgetAction = (type: "location" | "upload" | "cancel_location" | "cancel_upload", data?: unknown) => {
     const d = data as {
       address?: string;
       lat?: number;
@@ -147,6 +147,22 @@ export function useChatLogic() {
         setCurrentStep(4);
       }, 1500);
 
+    } else if (type === "cancel_location") {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          sender: "user",
+          text: "Mending saya ketik manual saja lokasinya.",
+          time: formatTime(),
+        },
+      ]);
+      setTimeout(() => {
+        setIsTyping(false);
+        addBot("Tidak masalah! Tolong ketikkan alamat lengkap usaha kamu di bawah ini ya. ✍️");
+        // Tetap di step 3 agar dia mengisi text text-based location
+      }, 1200);
+
     } else if (type === "upload") {
       setMessages(prev => [
         ...prev,
@@ -166,6 +182,36 @@ export function useChatLogic() {
         setShowLogin(true);
         setCurrentStep(5);
       }, 1800);
+    } else if (type === "cancel_upload") {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          sender: "user",
+          text: "Maaf, gambar tidak jelas atau saya ingin ketik manual angkanya saja.",
+          time: formatTime(),
+        },
+      ]);
+      setTimeout(() => {
+        setIsTyping(false);
+        addBot("Tidak masalah. Tolong ketik perkiraan omzet bulanan kamu di bawah ini, ya. ✍️");
+        // Tetap di step 4 agar dia mengetik angkanya secara manual.
+      }, 1200);
+    }
+  };
+
+  const handleUndo = () => {
+    // Find last user message
+    const lastUserIndex = [...messages].reverse().findIndex(m => m.sender === "user");
+    if (lastUserIndex === -1) return;
+
+    const trueIndex = messages.length - 1 - lastUserIndex;
+    const msgToEdit = messages[trueIndex];
+
+    // Remove it and all subsequent bot messages
+    setMessages(prev => prev.slice(0, trueIndex));
+    if (msgToEdit.text && msgToEdit.text !== "Mending saya ketik manual saja lokasinya.") {
+      setInputValue(msgToEdit.text);
     }
   };
 
@@ -174,6 +220,10 @@ export function useChatLogic() {
       text: `Foto "${file.name}" berhasil diunggah.`,
       url: previewUrl,
     });
+  };
+
+  const handleFileCancel = () => {
+    handleWidgetAction("cancel_upload");
   };
 
   const handleGoogleLogin = () => {
@@ -209,8 +259,10 @@ export function useChatLogic() {
     isTyping,
     showLogin,
     handleSend,
+    handleUndo,
     handleWidgetAction,
     handleFileUpload,
+    handleFileCancel,
     handleGoogleLogin,
     currentStep,
   };

@@ -6,12 +6,13 @@ interface SubScoreCardProps {
   title: string;
   value: string;
   score?: number; // 0–100
+  weight?: string;
   status: "good" | "warning" | "bad" | "info";
   icon: LucideIcon;
   delay?: number;
 }
 
-export function SubScoreCard({ title, value, score, status, icon: Icon, delay = 0 }: SubScoreCardProps) {
+export function SubScoreCard({ title, value, score, weight, status, icon: Icon, delay = 0 }: SubScoreCardProps) {
   const getStatusStyle = () => {
     switch (status) {
       case "good": return { bg: "#E8F5EF", color: "#10B981" };
@@ -44,9 +45,10 @@ export function SubScoreCard({ title, value, score, status, icon: Icon, delay = 
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-muted)", lineHeight: 1.2 }}>
-          {title}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-muted)", lineHeight: 1.2 }}>{title}</span>
+          {weight && <span style={{ fontSize: 9, fontWeight: 700, color: "var(--color-text-muted)", padding: "1px 5px", background: "var(--color-bg)", borderRadius: 4, border: "1px solid var(--color-border)" }}>Bobot: {weight}</span>}
+        </div>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
           <span style={{ fontSize: 15, fontWeight: 800, color: "var(--color-navy)", lineHeight: 1.2 }}>
             {value}

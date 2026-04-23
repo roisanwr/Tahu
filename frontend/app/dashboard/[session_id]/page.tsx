@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ArrowLeft, ArrowRight, Download, BarChart2, TrendingUp, MapPin, FileCheck, Activity } from "lucide-react";
@@ -13,9 +13,9 @@ import { SubScoreCard }       from "../../../components/dashboard/SubScoreCard";
 import { LoanBanner }         from "../../../components/dashboard/LoanBanner";
 import { RiskBadge }          from "../../../components/dashboard/RiskBadge";
 import { RadarChart }         from "../../../components/dashboard/RadarChart";
-import { ScoreBreakdownBar }  from "../../../components/dashboard/ScoreBreakdownBar";
 import { AIExplanationCard }  from "../../../components/dashboard/AIExplanationCard";
 import { ChatDrawer }         from "../../../components/chat/ChatDrawer";
+import { DashboardSkeleton }  from "../../../components/dashboard/LoadingSkeleton";
 
 gsap.registerPlugin(useGSAP);
 
@@ -80,11 +80,18 @@ export default function SessionDashboardPage({ params }: PageProps) {
   const { session_id } = use(params);
   const containerRef = useRef<HTMLDivElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
 
   const sessionData = MOCK_SESSIONS[session_id];
 
+  useEffect(() => {
+    // Simulate network delay
+    const timer = setTimeout(() => setIsFetching(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
   useGSAP(() => {
-    if (!sessionData) return;
+    if (!sessionData || isFetching) return;
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
     tl.fromTo(".dash-top",
@@ -141,11 +148,11 @@ export default function SessionDashboardPage({ params }: PageProps) {
   ];
 
   const metricCards = [
-    { id: 1, title: sessionData.subScores.financial.stateDesc,  value: sessionData.subScores.financial.stateValue, score: sessionData.subScores.financial.score,  status: sessionData.subScores.financial.status, icon: TrendingUp  },
-    { id: 2, title: sessionData.subScores.location.stateDesc,     value: sessionData.subScores.location.stateValue, score: sessionData.subScores.location.score,   status: sessionData.subScores.location.status, icon: MapPin      },
-    { id: 3, title: sessionData.subScores.experience.stateDesc,        value: sessionData.subScores.experience.stateValue, score: sessionData.subScores.experience.score, status: sessionData.subScores.experience.status, icon: BarChart2   },
-    { id: 4, title: sessionData.subScores.document.stateDesc,   value: sessionData.subScores.document.stateValue, score: sessionData.subScores.document.score,   status: sessionData.subScores.document.status, icon: FileCheck   },
-    { id: 5, title: sessionData.subScores.character.stateDesc,    value: sessionData.subScores.character.stateValue, score: sessionData.subScores.character.score, status: sessionData.subScores.character.status, icon: Activity    },
+    { id: 1, title: sessionData.subScores.financial.stateDesc,  value: sessionData.subScores.financial.stateValue, score: sessionData.subScores.financial.score,  status: sessionData.subScores.financial.status, icon: TrendingUp, weight: sessionData.subScores.financial.weight  },
+    { id: 2, title: sessionData.subScores.location.stateDesc,     value: sessionData.subScores.location.stateValue, score: sessionData.subScores.location.score,   status: sessionData.subScores.location.status, icon: MapPin, weight: sessionData.subScores.location.weight      },
+    { id: 3, title: sessionData.subScores.experience.stateDesc,        value: sessionData.subScores.experience.stateValue, score: sessionData.subScores.experience.score, status: sessionData.subScores.experience.status, icon: BarChart2, weight: sessionData.subScores.experience.weight   },
+    { id: 4, title: sessionData.subScores.document.stateDesc,   value: sessionData.subScores.document.stateValue, score: sessionData.subScores.document.score,   status: sessionData.subScores.document.status, icon: FileCheck, weight: sessionData.subScores.document.weight   },
+    { id: 5, title: sessionData.subScores.character.stateDesc,    value: sessionData.subScores.character.stateValue, score: sessionData.subScores.character.score, status: sessionData.subScores.character.status, icon: Activity, weight: sessionData.subScores.character.weight    },
   ];
 
   return (
@@ -154,26 +161,31 @@ export default function SessionDashboardPage({ params }: PageProps) {
       <DashboardHeader onOpenDrawer={() => setDrawerOpen(true)} />
 
       <main style={{ display: "flex", flex: 1, justifyContent: "center", width: "100%" }}>
-        <div
-          ref={containerRef}
-          style={{
-            flex: 1,
-            maxWidth: 960,
-            width: "100%",
-            borderLeft: "1px solid var(--color-border)",
-            borderRight: "1px solid var(--color-border)",
-            padding: "28px 24px 64px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 32,
-          }}
-        >
+        {isFetching ? (
+          <div style={{ flex: 1, padding: "32px 24px", maxWidth: 960, width: "100%" }}>
+            <DashboardSkeleton />
+          </div>
+        ) : (
+          <div
+            ref={containerRef}
+            style={{
+              flex: 1,
+              maxWidth: 960,
+              width: "100%",
+              borderLeft: "1px solid var(--color-border)",
+              borderRight: "1px solid var(--color-border)",
+              padding: "28px 24px 64px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 32,
+            }}
+          >
 
           {/* ── Top Bar ─────────────────────────────────────────────────── */}
           <div className="dash-top" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, opacity: 0 }}>
             <div>
               <Link
-                href="/chat"
+                href="/dashboard"
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 6,
                   fontSize: 12, fontWeight: 600, color: "var(--color-text-muted)",
@@ -184,7 +196,7 @@ export default function SessionDashboardPage({ params }: PageProps) {
                 onMouseLeave={e => e.currentTarget.style.color = "var(--color-text-muted)"}
               >
                 <ArrowLeft size={13} strokeWidth={2.5} />
-                Kembali ke Wawancara
+                Kembali ke Dashboard Utama
               </Link>
               <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--color-navy)", margin: 0, letterSpacing: "-0.4px" }}>
                 {sessionData.umkmName}
@@ -242,24 +254,12 @@ export default function SessionDashboardPage({ params }: PageProps) {
                     title={m.title}
                     value={m.value}
                     score={m.score}
+                    weight={m.weight}
                     status={m.status}
                     icon={m.icon}
                   />
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* ── Score Breakdown ─────────────────────────────────────────── */}
-          <div className="dash-section" style={{ opacity: 0 }}>
-            <SectionTitle>Rincian Skor per Dimensi</SectionTitle>
-            <div style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: 20,
-              padding: 24,
-            }}>
-              <ScoreBreakdownBar subScores={breakdownBars} />
             </div>
           </div>
 
@@ -295,7 +295,8 @@ export default function SessionDashboardPage({ params }: PageProps) {
             <LoanBanner amount={sessionData.loanAmount} isEligible={sessionData.isEligible} />
           </div>
 
-        </div>
+          </div>
+        )}
       </main>
     </div>
   );

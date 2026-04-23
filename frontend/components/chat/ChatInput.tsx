@@ -9,10 +9,11 @@ interface ChatInputProps {
   setInputValue: (val: string) => void;
   onSend: () => void;
   onFileUpload?: (file: File, previewUrl: string) => void;
+  onFileCancel?: () => void;
   disabled?: boolean;
 }
 
-export function ChatInput({ inputValue, setInputValue, onSend, onFileUpload, disabled }: ChatInputProps) {
+export function ChatInput({ inputValue, setInputValue, onSend, onFileUpload, onFileCancel, disabled }: ChatInputProps) {
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +81,10 @@ export function ChatInput({ inputValue, setInputValue, onSend, onFileUpload, dis
             isVisible={showOCR}
             fileName={previewFile.name}
             onComplete={handleOCRComplete}
+            onFail={() => {
+              dismissPreview();
+              if (onFileCancel) onFileCancel();
+            }}
           />
         </div>
       )}

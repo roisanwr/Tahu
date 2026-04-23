@@ -29,7 +29,7 @@ export default function ChatPage() {
 
   const {
     messages, inputValue, setInputValue, isTyping, showLogin,
-    handleSend, handleWidgetAction, handleFileUpload, handleGoogleLogin, currentStep,
+    handleSend, handleUndo, handleWidgetAction, handleFileUpload, handleFileCancel, handleGoogleLogin, currentStep,
   } = useChatLogic();
 
   // Listen for custom event from ChatBubble upload_request widget
@@ -129,15 +129,23 @@ export default function ChatPage() {
               Hari Ini, {formatTime()}
             </div>
 
-            {messages.map(msg => (
-              <ChatBubble
-                key={msg.id}
-                message={msg}
-                fontSize={getFontSize()}
-                onWidgetAction={handleWidgetAction}
-                onOpenMapSheet={() => setMapOpen(true)}
-              />
-            ))}
+            {messages.map((msg, index) => {
+              const isLatestUser =
+                msg.sender === "user" &&
+                index === messages.map(m => m.sender).lastIndexOf("user");
+
+              return (
+                <ChatBubble
+                  key={msg.id}
+                  message={msg}
+                  fontSize={getFontSize()}
+                  isEditable={isLatestUser}
+                  onEdit={handleUndo}
+                  onWidgetAction={handleWidgetAction}
+                  onOpenMapSheet={() => setMapOpen(true)}
+                />
+              );
+            })}
 
             {isTyping && <ChatTypingIndicator />}
             {showLogin && <ChatLogin onLogin={handleGoogleLogin} />}
@@ -150,6 +158,7 @@ export default function ChatPage() {
             setInputValue={setInputValue}
             onSend={handleSend}
             onFileUpload={handleFileUpload}
+            onFileCancel={handleFileCancel}
             disabled={isTyping || showLogin}
           />
         </div>

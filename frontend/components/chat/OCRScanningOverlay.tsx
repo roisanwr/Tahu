@@ -10,6 +10,7 @@ interface OCRScanningOverlayProps {
   isVisible: boolean;
   fileName?: string;
   onComplete: (result: { totalAmount: number; date: string; merchant: string }) => void;
+  onFail?: () => void;
 }
 
 const STAGES: { stage: Stage; label: string; sub: string; duration: number }[] = [
@@ -26,7 +27,7 @@ const MOCK_OCR = {
   merchant: "Toko Sembako Jaya",
 };
 
-export function OCRScanningOverlay({ isVisible, fileName = "dokumen.jpg", onComplete }: OCRScanningOverlayProps) {
+export function OCRScanningOverlay({ isVisible, fileName = "dokumen.jpg", onComplete, onFail }: OCRScanningOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const scanLineRef = useRef<HTMLDivElement>(null);
   const [currentStageIdx, setCurrentStageIdx] = useState(0);
@@ -178,9 +179,25 @@ export function OCRScanningOverlay({ isVisible, fileName = "dokumen.jpg", onComp
           })}
         </div>
 
-        {/* File label */}
-        <div style={{ marginTop: 10, fontSize: 10, color: "var(--color-text-muted)", fontFamily: "monospace" }}>
-          {fileName}
+        {/* File label & Cancel button */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+          <div style={{ fontSize: 10, color: "var(--color-text-muted)", fontFamily: "monospace", maxWidth: "60%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {fileName}
+          </div>
+          {!isDone && (
+            <button
+              onClick={() => { if (onFail) onFail() }}
+              style={{
+                fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)",
+                background: "transparent", border: "none", cursor: "pointer",
+                padding: "4px 6px", borderRadius: 4, transition: "background 0.2s"
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--color-navy)"; e.currentTarget.style.background = "var(--color-bg)" }}
+              onMouseLeave={e => { e.currentTarget.style.color = "var(--color-text-muted)"; e.currentTarget.style.background = "transparent" }}
+            >
+              Batalkan Scan / Gagal
+            </button>
+          )}
         </div>
       </div>
     </div>

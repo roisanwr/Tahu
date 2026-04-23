@@ -12,6 +12,7 @@ import { LoanBanner }     from "../../components/dashboard/LoanBanner";
 import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
 import { RiskBadge }      from "../../components/dashboard/RiskBadge";
 import { ChatDrawer }     from "../../components/chat/ChatDrawer";
+import { DashboardSkeleton } from "../../components/dashboard/LoadingSkeleton";
 import { useAuth }        from "../../lib/auth-context";
 
 gsap.registerPlugin(useGSAP);
@@ -36,6 +37,7 @@ export default function DashboardPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hasSession, setHasSession] = useState(true); // default true for hydration, checked in effect
   const [isMounted, setIsMounted]   = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const { isLoggedIn } = useAuth();
 
   useEffect(() => {
@@ -43,10 +45,14 @@ export default function DashboardPage() {
     const stored = localStorage.getItem("tahu_last_session");
     // Di real app, logicnya: fetch dari API. Untuk proto, cek localStorage & status auth.
     setHasSession(!!stored && isLoggedIn);
+    
+    // Simulate network delay
+    const timer = setTimeout(() => setIsFetching(false), 600);
+    return () => clearTimeout(timer);
   }, [isLoggedIn]);
 
   useGSAP(() => {
-    if (!isMounted || !hasSession) return;
+    if (!isMounted || !hasSession || isFetching) return;
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
     tl.to(".dashboard-hero",   { opacity: 1, y: 0, duration: 0.6, ease: "back.out(1.2)" })
       .to(".dashboard-metric", { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 }, "-=0.2")
@@ -63,7 +69,11 @@ export default function DashboardPage() {
       <main style={{ display: "flex", flex: 1, justifyContent: "center", width: "100%" }}>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", maxWidth: 950, width: "100%", backgroundColor: "var(--color-bg)", borderLeft: "1px solid var(--color-border)", borderRight: "1px solid var(--color-border)", minHeight: "100%" }}>
 
-          {isMounted && !hasSession ? (
+          {isFetching ? (
+            <div style={{ padding: "32px 24px" }}>
+              <DashboardSkeleton />
+            </div>
+          ) : isMounted && !hasSession ? (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
               <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--color-surface)", border: "1.5px dashed var(--color-border)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
                 <BarChart2 size={24} color="var(--color-text-muted)" />
@@ -190,7 +200,6 @@ export default function DashboardPage() {
                 <ArrowRight size={13} strokeWidth={2.5} />
               </Link>
             </div>
-
           </div>
           )}
         </div>

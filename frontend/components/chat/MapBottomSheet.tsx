@@ -8,6 +8,7 @@ interface MapBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (location: { address: string; lat: number; lng: number }) => void;
+  onCancel?: () => void;
 }
 
 // Mock address suggestions
@@ -19,7 +20,7 @@ const SUGGESTIONS = [
   { label: "Jl. Mangga Dua Raya, Sawah Besar, Jakarta Pusat", lat: -6.1422, lng: 106.8226 },
 ];
 
-export function MapBottomSheet({ isOpen, onClose, onConfirm }: MapBottomSheetProps) {
+export function MapBottomSheet({ isOpen, onClose, onConfirm, onCancel }: MapBottomSheetProps) {
   const sheetRef   = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -274,11 +275,30 @@ export function MapBottomSheet({ isOpen, onClose, onConfirm }: MapBottomSheetPro
               cursor: selectedAddress ? "pointer" : "not-allowed",
               transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
               letterSpacing: "0.01em",
+              marginBottom: 12,
             }}
             onMouseEnter={e => { if (selectedAddress) e.currentTarget.style.background = "var(--color-accent-dark)"; }}
             onMouseLeave={e => { if (selectedAddress) e.currentTarget.style.background = "var(--color-accent)"; }}
           >
             {selectedAddress ? `Konfirmasi — ${selectedAddress.label.split(",")[0]}` : "Pilih lokasi terlebih dahulu"}
+          </button>
+          
+          <button
+            onClick={() => {
+              if (onCancel) onCancel();
+              onClose();
+            }}
+            style={{
+              width: "100%", padding: "12px",
+              background: "transparent", color: "var(--color-text-muted)",
+              border: "none", borderRadius: 14,
+              fontSize: 13, fontWeight: 600,
+              cursor: "pointer", transition: "color 0.2s",
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--color-navy)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--color-text-muted)"}
+          >
+            Tolak Akses & Ketik Manual Saja
           </button>
         </div>
       </div>

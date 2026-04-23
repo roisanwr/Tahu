@@ -1,15 +1,17 @@
 import { Message } from "../../hooks/useChatLogic";
-import { User, MapPin, Map, Camera, FileImage } from "lucide-react";
+import { User, MapPin, Map, Camera, FileImage, Edit2 } from "lucide-react";
 import { TahuLogo } from "../icons/TahuLogo";
 
 interface ChatBubbleProps {
   message: Message;
   fontSize: string;
-  onWidgetAction?:   (type: "location" | "upload", data?: unknown) => void;
+  isEditable?: boolean;
+  onWidgetAction?:   (type: "location" | "upload" | "cancel_location", data?: unknown) => void;
   onOpenMapSheet?:   () => void;
+  onEdit?: () => void;
 }
 
-export function ChatBubble({ message, fontSize, onWidgetAction, onOpenMapSheet }: ChatBubbleProps) {
+export function ChatBubble({ message, fontSize, isEditable, onWidgetAction, onOpenMapSheet, onEdit }: ChatBubbleProps) {
   const isUser = message.sender === "user";
 
   return (
@@ -21,20 +23,41 @@ export function ChatBubble({ message, fontSize, onWidgetAction, onOpenMapSheet }
       {!isUser && <TahuLogo size={28} />}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: "80%", alignItems: isUser ? "flex-end" : "flex-start", transition: "font-size 0.3s" }}>
-        <div style={{
-          padding: "12px 14px",
-          fontSize: fontSize,
-          lineHeight: 1.5,
-          transition: "font-size 0.3s",
-          background: isUser ? "linear-gradient(180deg, #F1FFF7, #E8F5EF)" : "var(--color-surface)",
-          color: isUser ? "var(--color-navy)" : "var(--color-text-primary)",
-          border: isUser ? "none" : "1px solid var(--color-border)",
-          boxShadow: isUser ? "none" : "0 1px 4px rgba(0,0,0,0.04)",
-          borderRadius: isUser ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-        }}>
+        <div 
+          className="chat-bubble-inner"
+          style={{
+            position: "relative",
+            padding: "12px 14px",
+            fontSize: fontSize,
+            lineHeight: 1.5,
+            transition: "font-size 0.3s",
+            background: isUser ? "linear-gradient(180deg, #F1FFF7, #E8F5EF)" : "var(--color-surface)",
+            color: isUser ? "var(--color-navy)" : "var(--color-text-primary)",
+            border: isUser ? "none" : "1px solid var(--color-border)",
+            boxShadow: isUser ? "none" : "0 1px 4px rgba(0,0,0,0.04)",
+            borderRadius: isUser ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+          }}
+        >
           {message.text && (
-            <div style={{ marginBottom: message.widget && message.widget !== "none" ? "12px" : "0" }}>
-              {message.text}
+            <div style={{ marginBottom: message.widget && message.widget !== "none" ? "12px" : "0", display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <div style={{ flex: 1 }}>{message.text}</div>
+              {isUser && isEditable && (
+                <button
+                  onClick={onEdit}
+                  title="Koreksi Jawaban Terakhir"
+                  style={{
+                    background: "transparent", border: "none", cursor: "pointer", 
+                    color: "var(--color-accent)", padding: 4, borderRadius: "50%",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0, marginTop: -2, marginRight: -6, opacity: 0.8,
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.background = "var(--color-accent-light)" }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity = "0.8"; e.currentTarget.style.background = "transparent" }}
+                >
+                  <Edit2 size={13} strokeWidth={2.5} />
+                </button>
+              )}
             </div>
           )}
 
