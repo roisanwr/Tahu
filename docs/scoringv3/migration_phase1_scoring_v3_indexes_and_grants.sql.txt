@@ -1,0 +1,41 @@
+-- INDEX & GRANT step for migration_phase1_scoring_v3 (to be run OUTSIDE a transaction)
+-- Run this after migration_phase1_scoring_v3_updated.sql completes.
+
+-- 1) Create indexes concurrently to avoid locks on large tables
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sessions_contradiction_count ON sessions(contradiction_count);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sessions_revenue_declared_month ON sessions(revenue_declared_month);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_business_session_attempt_count ON business_profiles(session_attempt_count);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_documents_phash ON documents(image_phash);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_multiplier_audit_assessment_id ON multiplier_audit(assessment_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_fraud_signals_session_id ON fraud_signals(session_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_fraud_signals_business_id ON fraud_signals(business_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_fraud_signals_user_id ON fraud_signals(user_id);
+
+-- 2) Grant execute on helper function to service_role (Supabase built-in)
+-- Note: service_role is the Supabase elevated role. Use with caution and store key in CI secrets only.
+GRANT EXECUTE ON FUNCTION insert_fraud_signal(UUID, UUID, UUID, TEXT, TEXT, JSONB) TO service_role;
+
+-- 3) Optional: allow app role read-only access to fraud_signals (if you created a custom app role 'app_service')
+-- GRANT SELECT ON fraud_signals TO app_service;
+
+-- 4) Retention strategy (simple): create helper to archive and delete old signals older than 180 days
+-- This is a suggestion for scheduled job (CRON) run by backend/worker; not executed here automatically.
+
+CREATE OR REPLACE FUNCTION archive_old_fraud_signals(p_cutoff TIMESTAMPTZ)
+RETURNS INT LANGUAGE plpgsql AS $$
+DECLARE
+  v_count INT := 0;
+BEGIN
+  -- move to an archive table (create if not exists)
+  CREATE TABLE IF NOT EXISTS fraud_signals_archive (LIKE fraud_signals INCLUDING ALL);
+
+  INSERT INTO fraud_signals_archive SELECT * FROM fraud_signals WHERE created_at < p_cutoff;
+  v_count := (SELECT count(*) FROM fraud_signals WHERE created_at < p_cutoff);
+  DELETE FROM fraud_signals WHERE created_at < p_cutoff;
+  RETURN v_count;
+END;
+$$;
+
+-- The scheduled job should call: SELECT archive_old_fraud_signals(now() - interval '180 days');
+
+-- END OF INDEX & GRANT STEP

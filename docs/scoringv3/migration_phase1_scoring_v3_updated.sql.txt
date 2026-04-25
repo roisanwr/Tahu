@@ -1,0 +1,96 @@
+-- Migration: Phase 1 — Scoring Engine V3 (UPDATED for Supabase best practices)
+-- Purpose: add fields and tables required by Scoring V3 (confidence multipliers, fraud signals, additional session fields, flags)
+-- NOTE: This migration avoids creating DB roles or embedding passwords. Use the Supabase service_role key (stored in CI/Secrets) to run this migration.
+
+BEGIN;
+
+-- 1) Add columns to credit_assessments
+ALTER TABLE IF EXISTS credit_assessments
+  ADD COLUMN IF NOT EXISTS score_collateral INTEGER CHECK (score_collateral BETWEEN 0 AND 100),
+  ADD COLUMN IF NOT EXISTS confidence_multipliers JSONB,
+  ADD COLUMN IF NOT EXISTS gcs FLOAT CHECK (gcs BETWEEN 0.0 AND 1.0),
+  ADD COLUMN IF NOT EXISTS data_flag TEXT CHECK (data_flag IN ('sufficient','limited','insufficient')),
+  ADD COLUMN IF NOT EXISTS fraud_flag BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS hard_block_triggered BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS hard_block_reason TEXT;
+
+-- Update default weights to V3 canonical values only if weights is null or empty
+UPDATE credit_assessments
+SET weights = '{"financial":0.40,"collateral":0.25,"experience":0.15,"location":0.10,"character":0.10}'::jsonb
+WHERE weights IS NULL OR weights = '{}'::jsonb;
+
+-- 2) Add fields to sessions for runtime data and anti-abuse
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS contradiction_count INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS revenue_declared_month INTEGER CHECK (revenue_declared_month BETWEEN 1 AND 12),
+  ADD COLUMN IF NOT EXISTS gps_source TEXT CHECK (gps_source IN ('auto_device','manual_pin','text_only','none')) DEFAULT 'none',
+  ADD COLUMN IF NOT EXISTS gps_plausibility_score FLOAT CHECK (gps_plausibility_score BETWEEN 0.0 AND 1.0) DEFAULT 0.0,
+  ADD COLUMN IF NOT EXISTS session_attempt_count INTEGER DEFAULT 0;
+
+-- 3) Add fields to business_profiles and user_profiles for KYC and attempt tracking
+ALTER TABLE IF EXISTS business_profiles
+  ADD COLUMN IF NOT EXISTS session_attempt_count INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS last_assessment_at TIMESTAMPTZ;
+
+ALTER TABLE IF EXISTS user_profiles
+  ADD COLUMN IF NOT EXISTS nik_verified BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT FALSE;
+
+-- 4) Create fraud_signals table (append-only)
+CREATE TABLE IF NOT EXISTS fraud_signals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
+  business_id UUID REFERENCES business_profiles(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+  signal_type TEXT NOT NULL,
+  severity TEXT CHECK (severity IN ('low','medium','high','critical')) DEFAULT 'medium',
+  details JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5) Add columns to documents for image forensics
+ALTER TABLE IF EXISTS documents
+  ADD COLUMN IF NOT EXISTS image_phash TEXT,
+  ADD COLUMN IF NOT EXISTS exif_meta JSONB,
+  ADD COLUMN IF NOT EXISTS image_forgery_score FLOAT CHECK (image_forgery_score BETWEEN 0.0 AND 1.0) DEFAULT 0.0;
+
+-- 6) Add gps-related columns to business_profiles (source of truth for location)
+ALTER TABLE IF EXISTS business_profiles
+  ADD COLUMN IF NOT EXISTS gps_last_verified_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS gps_verification_method TEXT CHECK (gps_verification_method IN ('device','manual','none')) DEFAULT 'none';
+
+-- 7) Add audit fields for multiplier changes (history)
+CREATE TABLE IF NOT EXISTS multiplier_audit (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  assessment_id UUID REFERENCES credit_assessments(id) ON DELETE CASCADE,
+  multipliers JSONB, -- snapshot of confidence_multipliers
+  reason TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 8) Safety: revoke public write access on sensitive tables
+REVOKE ALL ON fraud_signals FROM PUBLIC;
+REVOKE ALL ON multiplier_audit FROM PUBLIC;
+
+-- 9) Create helper function to insert fraud signals (centralized entry point)
+CREATE OR REPLACE FUNCTION insert_fraud_signal(p_session_id UUID, p_business_id UUID, p_user_id UUID, p_type TEXT, p_severity TEXT, p_details JSONB)
+RETURNS UUID LANGUAGE plpgsql AS $$
+DECLARE
+  v_id UUID := uuid_generate_v4();
+BEGIN
+  INSERT INTO fraud_signals(id, session_id, business_id, user_id, signal_type, severity, details)
+  VALUES (v_id, p_session_id, p_business_id, p_user_id, p_type, p_severity, p_details);
+  RETURN v_id;
+END;
+$$;
+
+-- 10) Note: grant EXECUTE will be applied after migration using a separate step or in CI
+-- Example (to run as admin, NOT in this migration if you lack superuser):
+-- GRANT EXECUTE ON FUNCTION insert_fraud_signal(UUID, UUID, UUID, TEXT, TEXT, JSONB) TO service_role;
+
+COMMIT;
+
+-- End of transactional migration.
+--
+-- IMPORTANT: Index creation using CREATE INDEX CONCURRENTLY must be executed outside a transaction
+-- This is provided in a separate file: migration_phase1_scoring_v3_indexes.sql

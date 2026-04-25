@@ -1,0 +1,67 @@
+-- Rollback script for migration_phase1_scoring_v3.sql
+-- WARNING: Running this rollback will DROP columns and tables added by the migration
+-- and cause DATA LOSS for the fields dropped. Use only if you fully intend to remove
+-- these columns and data.
+
+BEGIN;
+
+-- 1) Drop function insert_fraud_signal
+DROP FUNCTION IF EXISTS insert_fraud_signal(UUID, UUID, UUID, TEXT, TEXT, JSONB);
+
+-- 2) Drop multiplier_audit table
+DROP TABLE IF EXISTS multiplier_audit CASCADE;
+
+-- 3) Drop fraud_signals table
+DROP TABLE IF EXISTS fraud_signals CASCADE;
+
+-- 4) Drop columns added to credit_assessments
+ALTER TABLE credit_assessments
+  DROP COLUMN IF EXISTS score_collateral,
+  DROP COLUMN IF EXISTS confidence_multipliers,
+  DROP COLUMN IF EXISTS gcs,
+  DROP COLUMN IF EXISTS data_flag,
+  DROP COLUMN IF EXISTS fraud_flag,
+  DROP COLUMN IF EXISTS hard_block_triggered,
+  DROP COLUMN IF EXISTS hard_block_reason;
+
+-- 5) Drop columns added to sessions
+ALTER TABLE sessions
+  DROP COLUMN IF EXISTS contradiction_count,
+  DROP COLUMN IF EXISTS revenue_declared_month,
+  DROP COLUMN IF EXISTS gps_source,
+  DROP COLUMN IF EXISTS gps_plausibility_score,
+  DROP COLUMN IF EXISTS session_attempt_count;
+
+-- 6) Drop columns added to business_profiles and user_profiles
+ALTER TABLE business_profiles
+  DROP COLUMN IF EXISTS session_attempt_count,
+  DROP COLUMN IF EXISTS last_assessment_at,
+  DROP COLUMN IF EXISTS gps_last_verified_at,
+  DROP COLUMN IF EXISTS gps_verification_method;
+
+ALTER TABLE user_profiles
+  DROP COLUMN IF EXISTS nik_verified,
+  DROP COLUMN IF EXISTS phone_verified;
+
+-- 7) Drop documents forensic columns
+ALTER TABLE documents
+  DROP COLUMN IF EXISTS image_phash,
+  DROP COLUMN IF EXISTS exif_meta,
+  DROP COLUMN IF EXISTS image_forgery_score;
+
+-- 8) Drop indexes created (if any remain)
+DROP INDEX IF EXISTS idx_sessions_contradiction_count;
+DROP INDEX IF EXISTS idx_sessions_revenue_declared_month;
+DROP INDEX IF EXISTS idx_business_session_attempt_count;
+DROP INDEX IF EXISTS idx_documents_phash;
+DROP INDEX IF EXISTS idx_multiplier_audit_assessment_id;
+DROP INDEX IF EXISTS idx_fraud_signals_session_id;
+DROP INDEX IF EXISTS idx_fraud_signals_business_id;
+DROP INDEX IF EXISTS idx_fraud_signals_user_id;
+
+-- 9) Drop view
+DROP VIEW IF EXISTS recent_fraud_signals;
+
+COMMIT;
+
+-- End of rollback script

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Deployment script for Phase 1 Scoring V3 migration
+# Usage:
+#  PG_CONN="postgres://postgres:password@db-host:5432/dbname" ./deploy_migration_phase1.sh
+# Or set PG_CONN in environment (preferred)
+
+set -euo pipefail
+
+if [ -z "${PG_CONN:-}" ]; then
+  echo "Error: PG_CONN environment variable not set. Example: export PG_CONN=\"postgres://postgres:password@host:5432/dbname\""
+  exit 1
+fi
+
+SQL_DIR="."
+MIGRATION_FILE="${SQL_DIR}/migration_phase1_scoring_v3_updated.sql"
+INDEX_FILE="${SQL_DIR}/migration_phase1_scoring_v3_indexes_and_grants.sql"
+
+echo "Running Phase 1 migration (transactional) -> ${MIGRATION_FILE}"
+psql "$PG_CONN" -v ON_ERROR_STOP=1 -f "$MIGRATION_FILE"
+
+echo "Running index & grants step (must be outside transaction) -> ${INDEX_FILE}"
+psql "$PG_CONN" -v ON_ERROR_STOP=1 -f "$INDEX_FILE"
+
+echo "Migration Phase 1 completed successfully. Please run backfill jobs as described in backfill_jobs_and_test_plan.md"
