@@ -44,7 +44,7 @@ Kamu terima bahwa V3 punya blind spot dan tetap jalankan apa adanya.
 Kalau tujuannya murni **demo/prototype** untuk membuktikan konsep ke investor atau juri kompetisi. Tidak ada yang menilai edge cases di demo.
 
 ### Masalahnya?
-Kalau TAHU dipakai untuk penilaian nyata — bahkan pilot terbatas sekalipun — kamu berpotensi **salah menilai** bisnis nyata. Warung Bu Sari yang udah 8 tahun bisa dapat skor lebih rendah dari seller marketplace yang baru 6 bulan cuma karena Bu Sari tidak digital. Ini bukan hanya masalah teknis, ini masalah **keadilan**.
+Kalau skorinaja dipakai untuk penilaian nyata — bahkan pilot terbatas sekalipun — kamu berpotensi **salah menilai** bisnis nyata. Warung Bu Sari yang udah 8 skorinajan bisa dapat skor lebih rendah dari seller marketplace yang baru 6 bulan cuma karena Bu Sari tidak digital. Ini bukan hanya masalah teknis, ini masalah **keadilan**.
 
 **Verdict:** ✅ Oke untuk pure demo. ❌ Tidak oke untuk penilaian nyata.
 
@@ -103,11 +103,11 @@ Kamu **tidak mengubah formula V3**, tapi kamu **secara eksplisit mendefinisikan*
 
 ### Kenapa ini yang paling masuk akal?
 
-Karena kalau kamu perhatikan dokumen PENDAHULUAN.md kamu sendiri, di bagian scope MVP tidak pernah disebutkan bahwa TAHU harus bisa menilai **semua jenis bisnis UMKM Indonesia.** Scope-nya adalah:
+Karena kalau kamu perhatikan dokumen PENDAHULUAN.md kamu sendiri, di bagian scope MVP tidak pernah disebutkan bahwa skorinaja harus bisa menilai **semua jenis bisnis UMKM Indonesia.** Scope-nya adalah:
 
 > *"Membangun prototype platform kredit scoring berbasis AI yang mampu menilai kelayakan kredit pelaku UMKM melalui antarmuka percakapan yang intuitif."*
 
-Ini adalah prototype. Dan prototype yang baik adalah prototype yang **tahu batasannya sendiri.**
+Ini adalah prototype. Dan prototype yang baik adalah prototype yang **skorinaja batasannya sendiri.**
 
 ---
 
@@ -203,7 +203,7 @@ V4.0 (jangka panjang) → Business-type-aware scoring dengan ML clustering
 ```
 
 Ini juga **story yang bagus untuk investor atau juri:**
-> *"Kami tahu V3 punya limitasi. Kami sudah identifikasi apa saja limitasinya, kami dokumentasikan dengan jujur, dan ini roadmap kami menuju V4 yang berbasis ML."*
+> *"Kami skorinaja V3 punya limitasi. Kami sudah identifikasi apa saja limitasinya, kami dokumentasikan dengan jujur, dan ini roadmap kami menuju V4 yang berbasis ML."*
 
 ---
 
@@ -212,7 +212,7 @@ Ini juga **story yang bagus untuk investor atau juri:**
 | Opsi | Effort | Risiko | Cocok Untuk |
 |---|---|---|---|
 | **Tetap V3** | Nol | Tinggi kalau dipakai nyata | Pure demo saja |
-| **Buat V4** | Sangat Tinggi | Tinggi tanpa data historis | 1–2 tahun ke depan |
+| **Buat V4** | Sangat Tinggi | Tinggi tanpa data historis | 1–2 skorinajan ke depan |
 | **Persempit V3 → V3.1** ✅ | Rendah-Sedang | Rendah | Sekarang, pilot nyata |
 
 ---
@@ -269,7 +269,7 @@ Output: Skor Final + Risk Level + Rekomendasi Pinjaman
 
 ## Profil: Bu Dewi — Toko Sembako + Catering Rumahan
 
-> Bu Dewi, 38 tahun. Punya toko sembako di ruko sendiri sekaligus menerima pesanan catering. Sudah berjalan 7 tahun, 4 karyawan, pakai QRIS, punya rekening koran BCA, foto toko bagus, lokasi di pinggir jalan utama dekat pasar.
+> Bu Dewi, 38 skorinajan. Punya toko sembako di ruko sendiri sekaligus menerima pesanan catering. Sudah berjalan 7 skorinajan, 4 karyawan, pakai QRIS, punya rekening koran BCA, foto toko bagus, lokasi di pinggir jalan utama dekat pasar.
 
 ---
 
@@ -294,7 +294,7 @@ ASET / COLLATERAL:
 └── photo_condition_score= 85 (toko bersih, tertata)
 
 PENGALAMAN:
-├── years_operating      = 7 tahun
+├── years_operating      = 7 skorinajan
 ├── employee_count       = 4 orang
 ├── has_whatsapp_biz     = true
 ├── loan_history_count   = 2 pinjaman
@@ -392,8 +392,8 @@ S_collateral = (C1×0.70) + (C2×0.30)
 
 **E1 — Lama Usaha:**
 ```
-years_operating = 7 tahun
-→ bracket ≥5 tahun → piecewise linear: 40 + bonus proporsional
+years_operating = 7 skorinajan
+→ bracket ≥5 skorinajan → piecewise linear: 40 + bonus proporsional
   = 40 + ((7-5)/5 × 10) = 40 + 4 = 44 → cap 45
 E1 = 44
 ```
@@ -410,7 +410,7 @@ E2 = min(20 + 10, 30) = 30 → dinormalisasi ke 0-100 = 75
 ```
 loan_history_count = 2
 loan_prev_status = 'lunas' semua → status_base = 40
-recency_bonus = +15 (pinjaman terakhir < 2 tahun lalu)
+recency_bonus = +15 (pinjaman terakhir < 2 skorinajan lalu)
 
 E3 = min(40 + 15 + (2×5), 100) = min(65, 100) = 65
 ```
@@ -550,7 +550,7 @@ GCS = (0.95×0.40)+(0.92×0.25)+(0.90×0.15)+(0.95×0.10)+(0.85×0.10)
 │  REKOMENDASI PINJAMAN:                  │
 │  Max Pinjaman  : 65jt × 2.0 = Rp 130jt │
 │  Tenor         : 12 bulan               │
-│  Bunga         : 14–18% per tahun       │
+│  Bunga         : 14–18% per skorinajan       │
 └─────────────────────────────────────────┘
 ```
 
@@ -561,7 +561,7 @@ GCS = (0.95×0.40)+(0.92×0.25)+(0.90×0.15)+(0.95×0.10)+(0.85×0.10)
 
 ## Profil: Pak Rudi — Bengkel Motor + Jual Spare Part
 
-> Pak Rudi, 44 tahun. Bengkel motor pinggir jalan, sudah 4 tahun, 2 karyawan tetap + 1 magang. Tidak pakai QRIS, semua cash. Punya rekening BRI tapi jarang pakai. Lokasi di gang kecil tapi ramai. Pernah pinjam KUR tapi sempat telat bayar 2 bulan.
+> Pak Rudi, 44 skorinajan. Bengkel motor pinggir jalan, sudah 4 skorinajan, 2 karyawan tetap + 1 magang. Tidak pakai QRIS, semua cash. Punya rekening BRI tapi jarang pakai. Lokasi di gang kecil tapi ramai. Pernah pinjam KUR tapi sempat telat bayar 2 bulan.
 
 ---
 
@@ -586,7 +586,7 @@ ASET / COLLATERAL:
 └── photo_condition_score= 60 (cukup berantakan)
 
 PENGALAMAN:
-├── years_operating      = 4 tahun
+├── years_operating      = 4 skorinajan
 ├── employee_count       = 2 tetap + 1 magang
 ├── has_whatsapp_biz     = false (WA biasa)
 ├── loan_history_count   = 1
@@ -661,7 +661,7 @@ C2 = min(35 + 30 + 12, 100) = 77
 
 **E1 — Lama Usaha:**
 ```
-years = 4 → bracket 3–5 tahun → year_score = 30
+years = 4 → bracket 3–5 skorinajan → year_score = 30
 Dinormalisasi: 30/40×100 = 75 → E1 = 75
 ```
 
@@ -781,7 +781,7 @@ GCS = (0.68×0.40)+(0.75×0.25)+(0.72×0.15)+(0.85×0.10)+(0.70×0.10)
 │  REKOMENDASI PINJAMAN:                      │
 │  Max Pinjaman  : 22jt × 0.5 = Rp 11jt      │
 │  Tenor         : 3 bulan                   │
-│  Bunga         : 24–30% per tahun           │
+│  Bunga         : 24–30% per skorinajan           │
 │                                             │
 │  ⚠️ Catatan AI:                             │
 │  "Data keuangan kurang terdokumentasi.      │
@@ -796,7 +796,7 @@ GCS = (0.68×0.40)+(0.75×0.25)+(0.72×0.15)+(0.85×0.10)+(0.70×0.10)
 
 ## Profil: Pak Asep — Warung Kelontong Kecil
 
-> Pak Asep, 52 tahun. Warung kelontong di rumah sendiri, sudah 2 tahun, sendirian tanpa karyawan. Semua cash, tidak ada dokumen apapun, tidak ada rekening koran. Pernah ada pinjaman ke koperasi yang macet Rp 3 juta. Tidak terlalu kooperatif saat wawancara, banyak jawaban tidak konsisten.
+> Pak Asep, 52 skorinajan. Warung kelontong di rumah sendiri, sudah 2 skorinajan, sendirian tanpa karyawan. Semua cash, tidak ada dokumen apapun, tidak ada rekening koran. Pernah ada pinjaman ke koperasi yang macet Rp 3 juta. Tidak terlalu kooperatif saat wawancara, banyak jawaban tidak konsisten.
 
 ---
 
@@ -822,7 +822,7 @@ ASET / COLLATERAL:
 └── photo_condition_score= 0
 
 PENGALAMAN:
-├── years_operating      = 2 tahun
+├── years_operating      = 2 skorinajan
 ├── employee_count       = 0
 ├── has_whatsapp_biz     = false
 ├── loan_history_count   = 1
@@ -913,7 +913,7 @@ C2 = 35
 
 **E1 — Lama Usaha:**
 ```
-years = 2 → bracket 1–3 tahun → year_score = 20
+years = 2 → bracket 1–3 skorinajan → year_score = 20
 Dinormalisasi: 20/40×100 = 50 → E1 = 50
 ```
 

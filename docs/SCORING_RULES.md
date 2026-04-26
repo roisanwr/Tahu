@@ -63,7 +63,7 @@ def score_financial(revenue, expense, has_multiple_docs):
 ## 2. Experience Score (S_experience) — Bobot 20%
 
 ### Input Variables
-- `years_operating` — Lama usaha (tahun)
+- `years_operating` — Lama usaha (skorinajan)
 - `employee_count` — Jumlah karyawan
 - `has_fixed_location` — Punya lokasi tetap?
 

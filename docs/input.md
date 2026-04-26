@@ -24,8 +24,8 @@
    - Rumus: -
 
 5. Lama usaha berdiri (Wajib)
-   - Cara input: Chatbot (angka / tahun)
-   - Output: Lama usaha (tahun)
+   - Cara input: Chatbot (angka / skorinajan)
+   - Output: Lama usaha (skorinajan)
    - Score: Skor pengalaman usaha (0–100)
    - Rumus: -
 

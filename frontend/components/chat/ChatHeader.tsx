@@ -1,6 +1,6 @@
 import { Dispatch, SetStateAction, useState } from "react";
 import { Menu, HelpCircle } from "lucide-react";
-import { TahuLogo } from "../icons/TahuLogo";
+import { skorinajaLogo } from "../icons/skorinajaLogo";
 
 interface ChatHeaderProps {
   onOpenDrawer: () => void;
@@ -26,7 +26,7 @@ export function ChatHeader({ onOpenDrawer, textSize, setTextSize, currentStep }:
             let isLocked = false;
 
             if (step < currentStep || step === currentStep) {
-              bgColor = "var(--color-accent-light)"; 
+              bgColor = "var(--color-accent-light)";
               width = 36;
             } else if (step >= 5) {
               isLocked = true;
@@ -66,9 +66,9 @@ export function ChatHeader({ onOpenDrawer, textSize, setTextSize, currentStep }:
 
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <TahuLogo size={28} />
+          <skorinajaLogo size={28} />
           <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1, userSelect: "none" }}>
-            <span style={{ color: "var(--color-accent)", fontWeight: 800, fontSize: 15, letterSpacing: "-0.5px" }}>TAHU</span>
+            <span style={{ color: "var(--color-accent)", fontWeight: 800, fontSize: 15, letterSpacing: "-0.5px" }}>skorinaja</span>
             <span style={{ color: "var(--color-navy)", fontSize: 9, fontWeight: 700 }}>NILAI KREDIT AI</span>
           </div>
         </div>

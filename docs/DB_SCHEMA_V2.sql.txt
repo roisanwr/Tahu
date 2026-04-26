@@ -104,7 +104,7 @@ CREATE TABLE business_profiles (
   description               TEXT,                          -- [+V3] deskripsi singkat usaha
 
   -- Pengalaman & Skala (data relatif statis)
-  years_operating           FLOAT,                         -- lama usaha dalam tahun (bisa desimal, misal 1.5)
+  years_operating           FLOAT,                         -- lama usaha dalam skorinajan (bisa desimal, misal 1.5)
   employee_count            INTEGER,
   has_fixed_location        BOOLEAN DEFAULT FALSE,
 

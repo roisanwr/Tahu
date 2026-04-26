@@ -1,5 +1,5 @@
 import { Menu } from "lucide-react";
-import { TahuLogo } from "../icons/TahuLogo";
+import { skorinajaLogo } from "../icons/skorinajaLogo";
 import Link from "next/link";
 import { useAuth } from "../../lib/auth-context";
 
@@ -9,7 +9,7 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ onOpenDrawer }: DashboardHeaderProps) {
   const { isLoggedIn } = useAuth();
-  
+
   return (
     <header style={{ padding: "0 24px", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64, borderBottom: "1px solid var(--color-border)", background: "var(--color-surface)", position: "sticky", top: 0, zIndex: 10, flexShrink: 0 }}>
       {/* Left Area */}
@@ -25,9 +25,9 @@ export function DashboardHeader({ onOpenDrawer }: DashboardHeaderProps) {
 
         {/* Logo */}
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <TahuLogo size={28} />
+          <skorinajaLogo size={28} />
           <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1, userSelect: "none" }}>
-            <span style={{ color: "var(--color-accent)", fontWeight: 800, fontSize: 15, letterSpacing: "-0.5px" }}>TAHU</span>
+            <span style={{ color: "var(--color-accent)", fontWeight: 800, fontSize: 15, letterSpacing: "-0.5px" }}>skorinaja</span>
             <span style={{ color: "var(--color-navy)", fontSize: 9, fontWeight: 700 }}>NILAI KREDIT AI</span>
           </div>
         </Link>

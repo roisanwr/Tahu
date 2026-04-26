@@ -9,9 +9,9 @@ type Message = {
 };
 
 const SCENARIO: { sender: "bot" | "user"; text: string; delay: number }[] = [
-  { sender: "bot", text: "Halo! Aku Asisten Tahu. Ceritakan sedikit tentang usaha yang kamu jalankan? 🙂", delay: 1000 },
-  { sender: "user", text: "Saya punya warung sembako kecil di depan rumah, udah jalan sekitar 3 tahun.", delay: 2500 },
-  { sender: "bot", text: "Wah, menarik banget. Boleh tahu rata-rata omzet per harinya berapa?", delay: 1500 },
+  { sender: "bot", text: "Halo! Aku Asisten skorinaja. Ceritakan sedikit tentang usaha yang kamu jalankan? 🙂", delay: 1000 },
+  { sender: "user", text: "Saya punya warung sembako kecil di depan rumah, udah jalan sekitar 3 skorinajan.", delay: 2500 },
+  { sender: "bot", text: "Wah, menarik banget. Boleh skorinaja rata-rata omzet per harinya berapa?", delay: 1500 },
   { sender: "user", text: "Kira-kira 500rb sampai 1 juta per hari.", delay: 2000 },
   { sender: "bot", text: "Baik. Apakah kamu punya catatan pembukuan atau nota belanja stok barang?", delay: 1500 },
   { sender: "user", text: "Ada nota belanja dari agen tiap minggu sih.", delay: 2000 },
@@ -43,7 +43,7 @@ export default function HeroChat() {
       }
 
       const step = SCENARIO[currentStep];
-      
+
       if (step.sender === "bot") {
         setIsBotTyping(true);
       } else {
@@ -56,7 +56,7 @@ export default function HeroChat() {
         setIsUserTyping(false);
         setMessages((prev) => [...prev, { id: Date.now(), sender: step.sender, text: step.text }]);
         currentStep++;
-        
+
         // Small pause before next action
         mainTimeout = setTimeout(playScenario, 600);
       }, step.delay);
@@ -110,7 +110,7 @@ export default function HeroChat() {
           T
         </div>
         <div>
-          <div style={{ fontSize: "var(--text-sm)", fontWeight: 700, color: "var(--color-navy)" }}>Asisten Tahu</div>
+          <div style={{ fontSize: "var(--text-sm)", fontWeight: 700, color: "var(--color-navy)" }}>Asisten skorinaja</div>
           <div style={{ fontSize: "var(--text-xs)", color: "var(--color-accent)", display: "flex", alignItems: "center", gap: 4 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-accent)", display: "inline-block" }} />
             Selalu Siap Membantu
@@ -144,7 +144,7 @@ export default function HeroChat() {
             </div>
           </div>
         ))}
-        
+
         {/* Typing Indicators */}
         {(isBotTyping || isUserTyping) && (
           <div style={{
@@ -165,7 +165,7 @@ export default function HeroChat() {
           </div>
         )}
       </div>
-      
+
       {/* Fake Input Area */}
       <div style={{
         padding: "var(--space-4)",

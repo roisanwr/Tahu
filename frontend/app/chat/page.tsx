@@ -5,14 +5,14 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useChatLogic } from "../../hooks/useChatLogic";
 
-import { ChatHeader }          from "../../components/chat/ChatHeader";
-import { ChatDrawer }          from "../../components/chat/ChatDrawer";
-import { ChatBubble }          from "../../components/chat/ChatBubble";
-import { ChatInput }           from "../../components/chat/ChatInput";
-import { ChatLogin }           from "../../components/chat/ChatLogin";
+import { ChatHeader } from "../../components/chat/ChatHeader";
+import { ChatDrawer } from "../../components/chat/ChatDrawer";
+import { ChatBubble } from "../../components/chat/ChatBubble";
+import { ChatInput } from "../../components/chat/ChatInput";
+import { ChatLogin } from "../../components/chat/ChatLogin";
 import { ChatTypingIndicator } from "../../components/chat/ChatTypingIndicator";
-import { MapBottomSheet }      from "../../components/chat/MapBottomSheet";
-import { ResumeBanner }        from "../../components/chat/ResumeBanner";
+import { MapBottomSheet } from "../../components/chat/MapBottomSheet";
+import { ResumeBanner } from "../../components/chat/ResumeBanner";
 
 gsap.registerPlugin(useGSAP);
 
@@ -21,10 +21,10 @@ const formatTime = () =>
 
 export default function ChatPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [mapOpen, setMapOpen]       = useState(false);
-  const [textSize, setTextSize]     = useState<"small" | "medium" | "large">("medium");
+  const [mapOpen, setMapOpen] = useState(false);
+  const [textSize, setTextSize] = useState<"small" | "medium" | "large">("medium");
 
-  const scrollRef    = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -39,8 +39,8 @@ export default function ChatPage() {
       const fileInput = document.querySelector<HTMLInputElement>("input[type='file'][accept]");
       fileInput?.click();
     };
-    window.addEventListener("tahu:trigger-file-upload", handler);
-    return () => window.removeEventListener("tahu:trigger-file-upload", handler);
+    window.addEventListener("skorinaja:trigger-file-upload", handler);
+    return () => window.removeEventListener("skorinaja:trigger-file-upload", handler);
   }, []);
 
   useGSAP(() => {
@@ -84,7 +84,7 @@ export default function ChatPage() {
   }, [messages, isTyping, showLogin]);
 
   const getFontSize = () => {
-    if (textSize === "small")  return "14px";
+    if (textSize === "small") return "14px";
     if (textSize === "medium") return "17px";
     return "20px";
   };

@@ -6,14 +6,14 @@ import { useGSAP } from "@gsap/react";
 import { ArrowRight, TrendingUp, MapPin, FileCheck, ShieldCheck, BarChart2 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { CreditGauge }    from "../../components/dashboard/CreditGauge";
-import { SubScoreCard }   from "../../components/dashboard/SubScoreCard";
-import { LoanBanner }     from "../../components/dashboard/LoanBanner";
+import { CreditGauge } from "../../components/dashboard/CreditGauge";
+import { SubScoreCard } from "../../components/dashboard/SubScoreCard";
+import { LoanBanner } from "../../components/dashboard/LoanBanner";
 import { DashboardHeader } from "../../components/dashboard/DashboardHeader";
-import { RiskBadge }      from "../../components/dashboard/RiskBadge";
-import { ChatDrawer }     from "../../components/chat/ChatDrawer";
+import { RiskBadge } from "../../components/dashboard/RiskBadge";
+import { ChatDrawer } from "../../components/chat/ChatDrawer";
 import { DashboardSkeleton } from "../../components/dashboard/LoadingSkeleton";
-import { useAuth }        from "../../lib/auth-context";
+import { useAuth } from "../../lib/auth-context";
 
 gsap.registerPlugin(useGSAP);
 
@@ -23,29 +23,29 @@ const DEMO_SESSION = "session-demo-001";
 const userData = {
   creditScore: 712,
   metrics: [
-    { id: 1, title: "Kekuatan Cashflow",   value: "Stabil",          score: 72, status: "good"    as const, icon: TrendingUp  },
-    { id: 2, title: "Potensi Lokasi",      value: "Strategis",       score: 78, status: "good"    as const, icon: MapPin      },
-    { id: 3, title: "Kelengkapan Berkas",  value: "Terverifikasi",   score: 80, status: "good"    as const, icon: FileCheck   },
-    { id: 4, title: "Keamanan Usaha",      value: "Cukup Terjaga",   score: 65, status: "info"    as const, icon: ShieldCheck },
+    { id: 1, title: "Kekuatan Cashflow", value: "Stabil", score: 72, status: "good" as const, icon: TrendingUp },
+    { id: 2, title: "Potensi Lokasi", value: "Strategis", score: 78, status: "good" as const, icon: MapPin },
+    { id: 3, title: "Kelengkapan Berkas", value: "Terverifikasi", score: 80, status: "good" as const, icon: FileCheck },
+    { id: 4, title: "Keamanan Usaha", value: "Cukup Terjaga", score: 65, status: "info" as const, icon: ShieldCheck },
   ],
   loanAmount: "Rp 28.400.000",
   isEligible: true,
 };
 
 export default function DashboardPage() {
-  const containerRef  = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hasSession, setHasSession] = useState(true); // default true for hydration, checked in effect
-  const [isMounted, setIsMounted]   = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const { isLoggedIn } = useAuth();
 
   useEffect(() => {
     setIsMounted(true);
-    const stored = localStorage.getItem("tahu_last_session");
+    const stored = localStorage.getItem("skorinaja_last_session");
     // Di real app, logicnya: fetch dari API. Untuk proto, cek localStorage & status auth.
     setHasSession(!!stored && isLoggedIn);
-    
+
     // Simulate network delay
     const timer = setTimeout(() => setIsFetching(false), 600);
     return () => clearTimeout(timer);
@@ -54,10 +54,10 @@ export default function DashboardPage() {
   useGSAP(() => {
     if (!isMounted || !hasSession || isFetching) return;
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-    tl.to(".dashboard-hero",   { opacity: 1, y: 0, duration: 0.6, ease: "back.out(1.2)" })
+    tl.to(".dashboard-hero", { opacity: 1, y: 0, duration: 0.6, ease: "back.out(1.2)" })
       .to(".dashboard-metric", { opacity: 1, y: 0, duration: 0.5, stagger: 0.08 }, "-=0.2")
-      .to(".dashboard-cta",    { opacity: 1, y: 0, duration: 0.5, ease: "back.out(1.1)" }, "-=0.1")
-      .to(".dash-detail-btn",  { opacity: 1, y: 0, duration: 0.4 }, "-=0.1");
+      .to(".dashboard-cta", { opacity: 1, y: 0, duration: 0.5, ease: "back.out(1.1)" }, "-=0.1")
+      .to(".dash-detail-btn", { opacity: 1, y: 0, duration: 0.4 }, "-=0.1");
   }, { scope: containerRef, dependencies: [isMounted, hasSession, isFetching] });
 
   let mainContent;

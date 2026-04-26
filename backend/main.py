@@ -31,7 +31,7 @@ load_dotenv()
 # App Instance
 # ─────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="Tahu — UMKM Credit Scoring API",
+    title="skorinaja — UMKM Credit Scoring API",
     description=(
         "Platform kredit scoring UMKM berbasis AI conversational interview. "
         "Menggunakan Gemini API untuk wawancara dan Azure OCR untuk analisis dokumen."
@@ -109,4 +109,4 @@ async def health_check() -> dict:
 # ─────────────────────────────────────────────────────────────
 @app.get("/", include_in_schema=False)
 async def root() -> dict:
-    return {"message": "Tahu API — lihat /docs untuk dokumentasi"}
+    return {"message": "skorinaja API — lihat /docs untuk dokumentasi"}

@@ -19,19 +19,19 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: {
-    default: "Tahu — Nilai Kredit UMKM Berbasis AI",
-    template: "%s | Tahu",
+    default: "skorinaja — Nilai Kredit UMKM Berbasis AI",
+    template: "%s | skorinaja",
   },
   description:
     "Platform penilaian kredit UMKM berbasis wawancara AI yang natural. " +
     "Tidak perlu formulir panjang — cukup ceritakan usahamu, dapatkan skor kredit dalam hitungan menit.",
   keywords: ["kredit UMKM", "skor kredit", "pinjaman usaha", "AI kredit", "wawancara kredit", "platform UMKM", "Indonesia"],
-  authors: [{ name: "Tim Tahu" }],
+  authors: [{ name: "Tim skorinaja" }],
   openGraph: {
     type: "website",
     locale: "id_ID",
-    siteName: "Tahu",
-    title: "Tahu — Nilai Kredit UMKM Berbasis AI",
+    siteName: "skorinaja",
+    title: "skorinaja — Nilai Kredit UMKM Berbasis AI",
     description: "Dapatkan penilaian kredit UMKM yang akurat dan adil melalui wawancara AI yang natural dan santai.",
   },
 };

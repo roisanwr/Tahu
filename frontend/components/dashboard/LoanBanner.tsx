@@ -12,7 +12,7 @@ export function LoanBanner({ amount, isEligible }: LoanBannerProps) {
     return (
       <div className="dashboard-cta" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 20, padding: 24, textAlign: "center", opacity: 0, transform: "translateY(20px)" }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--color-navy)", margin: "0 0 8px" }}>Belum Memenuhi Syarat Pencairan KUR</h3>
-        <p style={{ fontSize: 13, color: "var(--color-text-muted)", margin: 0, lineHeight: 1.5 }}>Silakan tingkatkan riwayat transaksi Anda selama 3 bulan ke depan untuk membuka akses pinjaman prioritas UMKM TAHU.</p>
+        <p style={{ fontSize: 13, color: "var(--color-text-muted)", margin: 0, lineHeight: 1.5 }}>Silakan tingkatkan riwayat transaksi Anda selama 3 bulan ke depan untuk membuka akses pinjaman prioritas UMKM skorinaja.</p>
       </div>
     );
   }

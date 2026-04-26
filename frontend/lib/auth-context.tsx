@@ -19,11 +19,11 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   isLoggedIn: false,
-  login: () => {},
-  logout: () => {},
+  login: () => { },
+  logout: () => { },
 });
 
-const STORAGE_KEY = "tahu_auth_user";
+const STORAGE_KEY = "skorinaja_auth_user";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -46,8 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     sessionStorage.removeItem(STORAGE_KEY);
-    sessionStorage.removeItem("tahu_banner_dismissed");
-    localStorage.removeItem("tahu_last_session");
+    sessionStorage.removeItem("skorinaja_banner_dismissed");
+    localStorage.removeItem("skorinaja_last_session");
   };
 
   return (

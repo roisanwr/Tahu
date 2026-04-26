@@ -1,0 +1,570 @@
+# 🧠 Pemahaman Proyek skorinaja + Roadmap Backend (Python)
+
+> Dokumen ini menggabungkan hasil riset mendalam terhadap seluruh dokumentasi proyek — mulai dari `PENDAHULUAN.md`, `roadmap.md`, `backendrules.md`, sampai seluruh file di `docs/scoringv3/` — dengan fokus utama pada scoring engine.
+
+---
+
+## Bagian 1 — Pemahaman Proyek skorinaja
+
+### 1.1 Problem yang Dipecahkan
+
+Indonesia punya **64 juta UMKM**, tapi mayoritas tidak bisa akses kredit formal karena:
+- Form konvensional panjang → **dropout rate tinggi**
+- Bank tidak punya data keuangan formal dari segmen ini → **credit gap**
+
+**skorinaja hadir sebagai solusi:** Mengubah proses pengajuan kredit dari *form-based* → **conversation-based** via AI chatbot, mengekstrak data terstruktur dari percakapan natural, lalu menghasilkan credit score multi-dimensional.
+
+### 1.2 Alur Sistem (End-to-End)
+
+```
+UMKM masuk → Gemini Chatbot Interview
+       ↓
+   RAW Chat History (Supabase)
+       ↓
+   Data Extraction Pipeline (Gemini + Regex dual-extractor)
+       ↓
+   Validation & Enrichment (server-side rules)
+       ↓
+   Scoring Engine V3.1 (5 pilar)
+       ↓
+   Credit Score 300–850 + Rekomendasi Pinjaman
+       ↓
+   Dashboard UMKM (frontend Next.js)
+```
+
+### 1.3 Status Saat Ini
+
+| Komponen | Status |
+|---|---|
+| ✅ Frontend UI | Selesai — production-quality prototype |
+| ✅ Design System | Selesai — GSAP + tokens + mobile-first |
+| ⚠️ Backend Skeleton | Ada `main.py` + router stubs — **semua isinya placeholder** |
+| ❌ Scoring Engine | Formula ada di scoringv3 — **belum dikodekan sama sekali** |
+| ❌ Database (Supabase) | Schema ada — **belum di-deploy** |
+| ❌ AI Gemini | `ai_agent.py` ada — **belum nyambung** |
+| ❌ Auth (Google OAuth) | Mock di frontend — **belum real** |
+
+> **Posisi sekarang:** Frontend di Day 7-8, Backend masih Day 0.
+> **Fokus berikutnya:** Scoring Engine dulu, baru Database.
+
+---
+
+### 1.4 Tech Stack Yang Dipakai
+
+| Layer | Teknologi |
+|---|---|
+| **Frontend** | Next.js (App Router) — sudah selesai |
+| **Backend API** | FastAPI (Python) |
+| **Database** | Supabase (PostgreSQL 15+) |
+| **AI Chatbot** | Gemini API (Google) |
+| **OCR** | Azure AI Document Intelligence |
+| **Deploy** | Vercel (FE) + Render.com (BE) |
+
+---
+
+## Bagian 2 — Deep-Dive: Scoring Engine V3.1
+
+Ini core-nya. Tanpa ini tidak ada output apapun.
+
+### 2.1 Arsitektur Pipeline Scoring
+
+```
+Input Layer → Normalisasi → Confidence Multiplier → Adjusted Scores → Aggregasi → Final Score → Post-process
+```
+
+### 2.2 5 Pilar & Bobotnya
+
+| Pilar | Kode | Bobot | Isi |
+|---|---|---|---|
+| Financial (Capacity) | `S_financial` | **40%** | Profitabilitas, volume, digital cashflow |
+| Collateral | `S_collateral` | **25%** | Asset coverage, lokasi tetap, foto verifikasi |
+| Experience | `S_experience` | **15%** | Lama usaha, karyawan, riwayat pinjaman |
+| Location | `S_location` | **10%** | Proximity pasar, densitas bisnis, infrastruktur |
+| Character | `S_character` | **10%** | Marketplace reputation, sentiment, psikometrik |
+
+### 2.3 Formula Inti
+
+```python
+# Step 1: Hitung Sub-scores (masing2 0-100)
+# Step 2: Hitung Confidence Multiplier per pilar (0.50–1.00)
+# Step 3: Adjusted = Sub-score × Multiplier
+# Step 4: Raw_Score = Σ(Adjusted × Weight)
+# Step 5: Final = clamp(round(300 + Raw_Score × 5.50), 300, 850)
+# Step 6: Apply soft-cap (fraud) atau hard block (macet/contradiction)
+```
+
+### 2.4 Risk Level Mapping
+
+| Range | Risk Level | Label |
+|---|---|---|
+| 750–850 | Very Low | Sangat Aman 🟢 |
+| 650–749 | Low | Aman 🔵 |
+| 550–649 | Medium | Sedang 🟡 |
+| 450–549 | High | Berisiko 🟠 |
+| 300–449 | Very High | Sangat Berisiko 🔴 |
+
+### 2.5 Mekanisme Keamanan Scoring
+
+- **Hard Block:** Pinjaman macet > 10jt → score langsung 380
+- **Hard Block:** Contradiction count > 6 → score langsung 380
+- **Soft Cap:** Fraud flag aktif → score max 579
+
+### 2.6 Basic vs Advanced Mode
+
+| Aspek | Basic | Advanced |
+|---|---|---|
+| F1 expense | Category HPP estimation | User-reported COGS+OPEX |
+| F3 Digital Cashflow | Tidak aktif | Aktif (QRIS, e-wallet, bank) |
+| CH3 Psychometric | Default 50 | Kuesioner psikometrik |
+| Foto aset | Opsional | Wajib minimal 2 |
+
+---
+
+## Bagian 3 — Roadmap Implementasi Backend (Python)
+
+> Mengacu pada `backendrules.md`: Level A MVP — modular monolith, 1 service + 1 DB, observability minimal, testing unit + minimal integration.
+
+---
+
+## 🗺️ ROADMAP: 4 Sprint
+
+---
+
+### SPRINT 0 — Fondasi Backend (1–2 hari)
+*"Sebelum nulis satu baris logic, pastikan pondasinya bener"*
+
+**Target:** Backend yang bisa berjalan, terstruktur, dan tidak memalukan.
+
+#### S0.1 — Restrukturisasi Folder (Modular Monolith)
+
+```
+backend/
+  app/
+    main.py               ← Entry point FastAPI
+    core/
+      config.py           ← Pydantic Settings (env validation)
+      logging.py          ← Structured JSON logging + request_id
+      errors.py           ← Error taxonomy (ValidationError, AuthError, dst)
+      security.py         ← JWT verification (Supabase token)
+      deps.py             ← FastAPI dependency injection
+    modules/
+      scoring/
+        engine.py         ← Core scoring functions (S_financial, dll)
+        multipliers.py    ← Confidence multiplier functions
+        validators.py     ← Server-side validation rules
+        pipeline.py       ← Full pipeline orchestration
+        schemas.py        ← Pydantic input/output schemas
+      sessions/
+        router.py
+        service.py
+        schemas.py
+      chat/
+        router.py
+        service.py
+        extractor.py      ← LLM + Regex dual-extractor
+        sanitizer.py      ← Input sanitization (anti-injection)
+      documents/
+        router.py
+        service.py
+        forensics.py      ← pHash, EXIF, forgery detection
+        ocr.py            ← Azure OCR client
+      geoscore/
+        router.py
+        service.py
+        overpass.py       ← OpenStreetMap Overpass API client
+      businesses/
+        router.py
+        service.py
+        schemas.py
+    infra/
+      db/
+        client.py         ← Supabase client singleton
+      ai/
+        gemini.py         ← Gemini API client
+        azure.py          ← Azure OCR client
+  tests/
+    unit/
+      test_scoring_engine.py
+      test_validators.py
+    integration/
+      test_api_sessions.py
+  pyproject.toml
+  .env.example
+```
+
+#### S0.2 — Core Infrastructure
+
+1. **`core/config.py`** — Pydantic `BaseSettings` dengan fail-fast validation
+2. **`core/logging.py`** — Structured JSON logging + request_id middleware
+3. **`core/errors.py`** — Error taxonomy lengkap (ValidationError → 400, AuthError → 401, dll)
+4. **`infra/db/client.py`** — Supabase client singleton dengan connection pooling
+
+> **Rule dari backendrules.md:** Config tervalidasi saat startup. Error taxonomy + consistent error response. Structured logging + request id. Ini WAJIB ada sebelum apapun.
+
+---
+
+### SPRINT 1 — Scoring Engine (2–3 hari) ← **FOKUS UTAMA**
+*"Core logic yang kalau salah, semua output jadi sampah"*
+
+Ini prioritas tertinggi. Scoring engine harus **independent dari database** — pure Python functions yang deterministik dan fully testable.
+
+#### S1.1 — Pure Scoring Functions (`modules/scoring/engine.py`)
+
+Implement semua fungsi per sub-komponen sesuai `SCORING_ENGINE_V3_1.md`:
+
+**S_financial:**
+- `calc_F1(revenue, expense, category, mode)` — Profitability (piecewise linear)
+- `calc_F2(revenue, tx_freq_daily, has_multiple_months)` — Volume & Consistency
+- `calc_F3(has_qris, has_ewallet, bank_linked, qris_verified)` — Digital Cashflow (Advanced only)
+- `calc_S_financial(F1, F2, F3, mode)` — Aggregasi
+
+**S_collateral:**
+- `calc_C1(assets_estimate, monthly_revenue, asset_type)` — Asset Coverage Ratio
+- `calc_C2(has_fixed_location, photo_verified, photo_condition_score)` — Physical Verification
+- `calc_S_collateral(C1, C2)` — Aggregasi
+
+**S_experience:**
+- `calc_E1(years)` — Years Operating
+- `calc_E2(employee_count, has_wa_business)` — Employee & Digital Presence
+- `calc_E3(loan_count, latest_status, years_since_last)` — Loan History
+- `calc_S_experience(E1, E2, E3)` — Aggregasi
+
+**S_location:**
+- `calc_L1(market_distance_km)` — Market Proximity
+- `calc_L2(business_count_500m)` — Business Density
+- `calc_L3(road_type, road_access, bank_nearby)` — Infrastructure
+- `calc_S_location(L1, L2, L3)` — Aggregasi
+
+**S_character:**
+- `calc_CH1(rating, total_reviews, monthly_orders, followers)` — Marketplace Reputation
+- `calc_CH2(sentiment_score, completeness_pct, contradiction_count)` — Sentiment & Behavioral
+- `calc_CH3(psychometric_score, mode)` — Psychometric (Advanced only)
+- `calc_S_character(CH1, CH2, CH3, mode)` — Aggregasi
+
+#### S1.2 — Confidence Multipliers (`modules/scoring/multipliers.py`)
+
+- `calc_M_financial(ocr_docs_count, ocr_avg_confidence, self_vs_ocr_delta_pct, has_F3, has_anomaly)`
+- `calc_M_collateral(photo_count, has_exif, exif_plausible, photo_forgery_score)`
+- `calc_M_experience(has_loan_docs, years_verifiable)`
+- `calc_M_location(gps_plausibility_score, device_vs_pin_km)`
+- `calc_M_character(has_marketplace, has_psychometric, sentiment_confidence)`
+- `calc_GCS(multipliers, weights)` — Global Confidence Score
+
+#### S1.3 — Normalisasi & Final Score
+
+```python
+def calculate_final_score(sub_scores, multipliers, weights) -> int:
+    adjusted = [s * m for s, m in zip(sub_scores, multipliers)]
+    raw_score = sum(a * w for a, w in zip(adjusted, weights))
+    final = round(300 + raw_score * 5.50)
+    return max(300, min(850, final))
+```
+
+#### S1.4 — Hard Block & Soft Cap
+
+```python
+def check_hard_blocks(prev_loan_status, prev_loan_amount, contradiction_count)
+def apply_soft_cap(final_score, fraud_flag)
+def get_risk_level(final_score) -> str
+def recommend_loan(final_score, monthly_revenue, fraud_flag) -> dict
+```
+
+#### S1.5 — Pipeline Orchestrator (`modules/scoring/pipeline.py`)
+
+```python
+def run_scoring_pipeline(session_data: ScoringInput) -> ScoringResult:
+    # 1. Hard blocks check first
+    # 2. Calculate all sub-scores
+    # 3. Calculate all multipliers
+    # 4. Calculate GCS
+    # 5. Calculate final score
+    # 6. Apply soft cap if needed
+    # 7. Get risk level + loan recommendation
+    # 8. Return full audit result
+```
+
+#### S1.6 — Unit Tests (`tests/unit/test_scoring_engine.py`)
+
+Test cases WAJIB dari spec:
+| Test | Expected |
+|---|---|
+| All scores=100, all M=1.0 | Final = 850 |
+| All scores=0, all M=0.5 | Final = 300 |
+| Fraud flag, raw=700 | Final = 579 (soft cap) |
+| Macet > 10jt | Hard block = 380 |
+| contradiction_count=7 | Hard block = 380 |
+| Basic mode F3 | F3 tidak dihitung |
+| GCS < 0.75 | data_flag = 'insufficient' |
+| Bu Dewi profile | Score ≈ 747 |
+| Pak Rudi profile | Score ≈ 539 |
+
+---
+
+### SPRINT 2 — Server-Side Validation & Security (1–2 hari)
+
+Sesuai `SCORING_V3_1_MITIGATIONS.md` — ini **wajib** sebelum scoring bisa dipercaya.
+
+#### S2.1 — Input Validators (`modules/scoring/validators.py`)
+
+- `validate_nik(nik: str)` — NIK 16 digit + checksum
+- `validate_numeric_ranges(revenue, expense, tx_freq, assets)` — Range plausibility
+- `check_cross_field(revenue, expense, tx_freq, category)` — Cross-field consistency
+- `validate_gps(device_lat, device_lon, manual_lat, manual_lon)` — Haversine + Indonesia bbox
+- `check_document_age(ocr_date, session_created_at)` — 90-day rule
+- `check_revenue_plausibility(revenue, category)` — vs BPS median per kategori
+
+#### S2.2 — Input Sanitization (`modules/chat/sanitizer.py`)
+
+```python
+def sanitize_user_input(text: str) -> str:
+    # Strip control characters
+    # Remove injection patterns (ignore/disregard/system:)
+    # Truncate at 4k tokens
+```
+
+#### S2.3 — Dual Extractor (`modules/chat/extractor.py`)
+
+```python
+def accept_field(field_name, regex_value, llm_value) -> Optional[Any]:
+    # Regex + LLM must agree → accept
+    # Discrepancy → mark low confidence, require clarification
+```
+
+#### S2.4 — Document Forensics (`modules/documents/forensics.py`)
+
+```python
+def analyze_document_image(image_bytes: bytes) -> ForensicsResult:
+    # EXIF extraction
+    # pHash computation (imagehash library)
+    # Forgery score heuristics
+    # Duplicate check across sessions
+```
+
+#### S2.5 — Fraud Signal Logging
+
+```python
+def insert_fraud_signal(session_id, assessment_id, type, severity, details)
+def track_contradiction(session_id, field, old_value, new_value)
+def detect_wash_trading(transactions: list) -> dict
+def check_device_abuse(user_agent, ip_geo, device_id) -> dict
+```
+
+---
+
+### SPRINT 3 — API Routes & Integration (2–3 hari)
+
+Barulah connect scoring engine ke HTTP endpoints.
+
+#### S3.1 — Scoring Router (`POST /v1/calculate-score`)
+
+```
+Request:  { session_id }
+Response: {
+  assessment_id, final_score, risk_level,
+  gcs, gcs_bucket, data_flag, fraud_flag, fraud_signals,
+  sub_scores: { financial, collateral, experience, location, character },
+  confidence_multipliers: { ... },
+  loan_recommendation: { eligible, max_amount, tenor_months, interest_range },
+  explanation: "narasi bahasa Indonesia..."
+}
+```
+
+#### S3.2 — Sessions Router
+
+- `POST /v1/sessions` — Create session
+- `GET /v1/sessions/:id` — Get detail
+- `PATCH /v1/sessions/:id` — Update stage/data
+- `POST /v1/sessions/:id/complete` — Trigger scoring pipeline
+
+#### S3.3 — Chat Router
+
+- `POST /v1/sessions/:id/messages` — Send message → Gemini → ekstrak data → update session
+- `GET /v1/sessions/:id/messages` — Get history
+
+#### S3.4 — Documents Router
+
+- `POST /v1/sessions/:id/documents` — Upload → forensics → Azure OCR
+- `GET /v1/sessions/:id/documents` — List
+
+#### S3.5 — Geoscore Router
+
+- `POST /v1/sessions/:id/geoscore` — Hitung location score dari GPS
+
+#### S3.6 — Businesses Router
+
+- `POST /v1/businesses` — Create business profile
+- `GET /v1/businesses` — List user's businesses
+- `GET /v1/businesses/:id/assessments` — Assessment history
+
+---
+
+## Bagian 4 — Urutan Eksekusi Realistis
+
+```
+DAY 1 (Sprint 0):
+  ├── Restrukturisasi folder modular monolith
+  ├── core/config.py + core/logging.py + core/errors.py
+  └── infra/db/client.py (Supabase singleton)
+
+DAY 2-3 (Sprint 1 — FOKUS):
+  ├── modules/scoring/engine.py (semua fungsi sub-score)
+  ├── modules/scoring/multipliers.py
+  ├── modules/scoring/pipeline.py
+  └── tests/unit/test_scoring_engine.py (WAJIB green sebelum lanjut)
+
+DAY 4 (Sprint 2):
+  ├── modules/scoring/validators.py
+  ├── modules/chat/sanitizer.py + extractor.py
+  └── modules/documents/forensics.py
+
+DAY 5-7 (Sprint 3):
+  ├── Semua routers → connect ke pipeline
+  ├── Gemini integration (ai_agent.py → modules/ai/gemini.py)
+  └── Azure OCR integration
+
+──── MILESTONE: Scoring end-to-end bisa jalan ────
+
+DAY 8-9:
+  ├── Deploy schema ke Supabase
+  ├── Auth (Google OAuth via Supabase)
+  └── Integration test
+
+DAY 10:
+  └── Deploy ke Render.com
+```
+
+---
+
+## Bagian 5 — Keputusan Teknis Penting
+
+### 5.1 Scoring Engine: Pure Functions First
+
+Scoring engine **tidak boleh depend langsung ke database** di Sprint 1. Alasannya:
+1. Bisa ditest tanpa DB ✅
+2. Deterministic dan auditable ✅
+3. Bisa di-reuse untuk backfill jobs ✅
+
+### 5.2 Basic Mode Default
+
+MVP default ke **Basic mode**. Advanced mode diaktifkan hanya kalau user secara eksplisit pilih atau upload dokumen pendukung. Ini mengurangi friction untuk UMKM yang cash-only.
+
+### 5.3 Scope V3 (Bukan V4)
+
+Sesuai `history.md` — keputusan sudah dibuat untuk **pakai V3.1 + scope dipersempit**:
+- ✅ Bisnis yang bisa dinilai: Retail, Kuliner, Jasa bulanan stabil, Seller marketplace semi-aktif
+- ⚠️ Dengan catatan: Grosir, musiman, marketplace murni
+- ❌ Di luar scope: Kontraktor/project-based, petani, freelancer, enterprise > 500jt/bulan
+
+### 5.4 Anti "Backend Slop" (dari backendrules.md)
+
+Yang harus ada dari awal:
+- ✅ Structured JSON logging + request_id
+- ✅ Error taxonomy (bukan semua jadi 500)
+- ✅ Pydantic config validation saat startup (fail-fast)
+- ✅ Timeouts untuk semua external API calls (Gemini, Azure, Overpass)
+- ✅ Rate limiting per endpoint
+
+Yang **tidak boleh** dilakukan:
+- ❌ Microservices cosplay — ini monolith, titik
+- ❌ Service layer dobel tanpa alasan
+- ❌ Async everywhere — pakai async hanya untuk IO-bound (DB, HTTP calls)
+- ❌ Exceptions ditelan — semua error harus berbuah response yang bermakna
+
+---
+
+## Bagian 6 — File Migration Database (Catatan)
+
+Sebelum database di-setup, scoring engine harus bisa jalan dengan **mock data** untuk testing. Setelah scoring green, barulah:
+1. Deploy `migration_phase1_scoring_v3_updated.sql` ke Supabase
+2. Deploy indexes (`migration_phase1_scoring_v3_indexes_and_grants.sql`) **CONCURRENTLY** (di luar transaction block)
+3. Setup RLS policies (disable dulu di dev, enable di production)
+
+---
+
+*Dokumen ini adalah living document — update sesuai progres aktual.*
+
+
+
+
+Edited dbv3.sql
+
+Oke, aku baca `dbv3.sql`-nya dari diff yang kamu kasih. Ini schema yang sudah sangat solid dan lengkap. Sekarang aku jawab pertanyaan strategismu dulu.
+
+---
+
+## Jawaban Jujur: YA, buat alur chat dulu. Ini bukan nice-to-have, ini blocker.
+
+Ini alasannya kenapa:
+
+### 🔗 Chat adalah sumber data scoring — bukan opsional
+
+Scoring engine V3.1 butuh **data spesifik** untuk bisa jalan. Semua data itu **100% datang dari percakapan**. Kalau alur chat tidak didefinisikan, kita tidak skorinaja:
+
+| Field untuk Scoring | Dapat dari... |
+|---|---|
+| `monthly_revenue`, `monthly_expense` | Pertanyaan keuangan |
+| `transaction_frequency_daily` | Pertanyaan frekuensi transaksi |
+| `assets_estimate`, `asset_type` | Pertanyaan aset/collateral |
+| `years_operating`, `employee_count` | Pertanyaan profil bisnis |
+| `loan_count`, `prev_loan_status` | Pertanyaan riwayat pinjaman |
+| `has_wa_business`, marketplace | Pertanyaan digital presence |
+| `has_fixed_location` | Pertanyaan lokasi |
+| `photo_condition_score` | Upload foto usaha |
+| `GPS coordinates` | Share lokasi |
+| `sentiment_score`, `contradiction_count` | Diekstrak dari quality jawaban |
+
+**Kalau salah satu pertanyaan tidak ada → field scoring kosong → multiplier drop → skor tidak akurat.**
+
+---
+
+### 🏗️ Alur chat nentuin 3 hal teknis yang tidak bisa diubah gampang
+
+**1. `extracted_data` schema di `chat_history`**
+
+DB-mu punya kolom `extracted_data JSONB` di setiap message. Schema JSON ini harus stabil. Kalau chat flow berubah tengah jalan, schema extraction ikut berubah, dan kita harus rewrite extractor.
+
+**2. `interview_stage` di `sessions`**
+
+DB-mu sudah define stages: `intro → profil → keuangan → dokumen → geolokasi → summary`. State machine backend-nya harus ngikutin ini persis. Kalau chat flow-nya berubah, stage order bisa berubah, dan ini breaking change ke DB constraint.
+
+**3. Gemini System Prompt**
+
+Ini yang paling kritikal. Quality data extraction **100% tergantung** kualitas system prompt Gemini. Kalau prompt tidak skorinaja harus tanya apa, extraction-nya juga tidak skorinaja harus ekstrak apa.
+
+---
+
+### 🚦 Apa yang perlu didefinisikan di "alur chat"?
+
+Minimal ini yang perlu clear sebelum coding:
+
+1. **Pertanyaan apa saja per stage?** (dan urutannya)
+2. **Data apa yang diekstrak dari setiap jawaban?** (field name + type)
+3. **Trigger apa yang mengaktifkan UI component?** (misal: setelah keuangan → muncul tombol upload foto)
+4. **Kapan mode basic vs advanced bifurcate?** (pertanyaan yang berbeda)
+5. **Bagaimana chatbot handle jawaban ambigu atau tidak lengkap?**
+
+---
+
+### 📋 Ringkasan Keputusan
+
+```
+Urutan yang benar:
+  1. Definisikan alur chat (pertanyaan + extracted fields per stage)
+  2. Baru: scoring engine functions
+  3. Baru: extractor pipeline (karena sudah skorinaja field apa yang harus diambil)
+  4. Baru: Gemini system prompt
+  5. Baru: API routes
+
+Kalau skip langkah 1 → kita bisa coding scoring engine-nya,
+tapi pas connect ke chat, banyak field kosong atau tidak match.
+Itu lebih mahal difix belakangan.
+```
+
+---
+
+**Saran konkretku:** Buat 1 dokumen `CONVERSATION_FLOW.md` yang berisi:
+- Tabel: Stage → Pertanyaan → Field yang diekstrak → Tipe data
+- Basic mode vs Advanced mode path yang berbeda
+- Edge cases (jawaban ambigu, skip, koreksi)
+
+Itu yang perlu kamu buat sekarang. Mau aku bantu drafting-nya sekarang berdasarkan semua data scoring yang sudah ada di `SCORING_ENGINE_V3_1.md`?

@@ -42,11 +42,11 @@ const MOCK_SESSIONS = [
 export function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
   const { user, isLoggedIn, logout } = useAuth();
   const router = useRouter();
-  
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [profileData, setProfileData] = useState<BusinessProfileData>({
     business_name: "Warung Sembako Bu Sari",
-    owner_name: "Budi Santoso", 
+    owner_name: "Budi Santoso",
     category: "F&B / Kuliner",
     description: "Toko sembako melayani warga setempat",
     employee_count: 2,
@@ -301,16 +301,16 @@ export function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
           )}
 
           <div style={{ fontSize: 10, color: "var(--color-text-muted)", textAlign: "center", marginTop: 8, opacity: 0.6 }}>
-            TAHU v0.1 · Data simulasi
+            skorinaja v0.1 · Data simulasi
           </div>
         </div>
       </div>
-      
-      <EditProfileModal 
-        isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)} 
+
+      <EditProfileModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
         initialData={profileData}
-        onSave={(data) => setProfileData(data)} 
+        onSave={(data) => setProfileData(data)}
       />
     </>
   );

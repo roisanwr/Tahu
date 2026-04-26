@@ -10,8 +10,8 @@
 ## Base URL
 
 ```
-Production:  https://api.tahu.id/v1
-Staging:     https://staging-api.tahu.id/v1
+Production:  https://api.skorinaja.id/v1
+Staging:     https://staging-api.skorinaja.id/v1
 ```
 
 ---
@@ -155,7 +155,7 @@ Triggers scoring pipeline.
     {
       "id": "uuid",
       "role": "assistant",
-      "content": "Halo! Saya TAHU, asisten AI...",
+      "content": "Halo! Saya skorinaja, asisten AI...",
       "message_type": "text",
       "created_at": "2026-04-24T10:00:00Z"
     }

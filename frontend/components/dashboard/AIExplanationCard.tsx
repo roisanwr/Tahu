@@ -85,7 +85,7 @@ export function AIExplanationCard({ score, riskLabel, explanation }: AIExplanati
         </div>
         <div>
           <div style={{ fontSize: 12, fontWeight: 800, color: "var(--color-accent)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            Analisis AI — TAHU
+            Analisis AI — skorinaja
           </div>
           <div style={{ fontSize: 10, color: "var(--color-accent-dark)", fontWeight: 500, marginTop: 1 }}>
             Berdasarkan data wawancara & dokumen

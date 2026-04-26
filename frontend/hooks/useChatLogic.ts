@@ -40,13 +40,13 @@ export function useChatLogic() {
     {
       id: "1",
       sender: "bot",
-      text: "Halo! Selamat datang di TAHU 👋 Ceritain ke aku — usaha apa yang lagi kamu jalanin sekarang?",
+      text: "Halo! Selamat datang di skorinaja 👋 Ceritain ke aku — usaha apa yang lagi kamu jalanin sekarang?",
       time: formatTime(),
     },
   ]);
-  const [inputValue, setInputValue]   = useState("");
-  const [isTyping, setIsTyping]       = useState(false);
-  const [showLogin, setShowLogin]     = useState(false);
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
   const addBot = (text: string, extra: Partial<Message> = {}) => {
@@ -78,7 +78,7 @@ export function useChatLogic() {
     } else if (currentStep === 2) {
       setTimeout(() => {
         addBot(
-          "Oke! Sekarang aku perlu tahu lokasi usahamu — biar bisa analisa seberapa strategis posisinya di peta.",
+          "Oke! Sekarang aku perlu skorinaja lokasi usahamu — biar bisa analisa seberapa strategis posisinya di peta.",
           { widget: "location_request" }
         );
         setCurrentStep(3);
@@ -234,7 +234,7 @@ export function useChatLogic() {
 
     // 2. Simpan sesi terakhir ke localStorage (untuk ResumeBanner)
     localStorage.setItem(
-      "tahu_last_session",
+      "skorinaja_last_session",
       JSON.stringify({
         id: "session-demo-001",
         name: "Warung Sembako Bu Sari",

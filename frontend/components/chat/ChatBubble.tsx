@@ -1,13 +1,13 @@
 import { Message } from "../../hooks/useChatLogic";
 import { User, MapPin, Map, Camera, FileImage, Edit2 } from "lucide-react";
-import { TahuLogo } from "../icons/TahuLogo";
+import { skorinajaLogo } from "../icons/skorinajaLogo";
 
 interface ChatBubbleProps {
   message: Message;
   fontSize: string;
   isEditable?: boolean;
-  onWidgetAction?:   (type: "location" | "upload" | "cancel_location", data?: unknown) => void;
-  onOpenMapSheet?:   () => void;
+  onWidgetAction?: (type: "location" | "upload" | "cancel_location", data?: unknown) => void;
+  onOpenMapSheet?: () => void;
   onEdit?: () => void;
 }
 
@@ -20,10 +20,10 @@ export function ChatBubble({ message, fontSize, isEditable, onWidgetAction, onOp
       data-sender={message.sender}
       style={{ display: "flex", alignItems: "flex-end", gap: 8, justifyContent: isUser ? "flex-end" : "flex-start", opacity: 0 }}
     >
-      {!isUser && <TahuLogo size={28} />}
+      {!isUser && <skorinajaLogo size={28} />}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: "80%", alignItems: isUser ? "flex-end" : "flex-start", transition: "font-size 0.3s" }}>
-        <div 
+        <div
           className="chat-bubble-inner"
           style={{
             position: "relative",
@@ -46,7 +46,7 @@ export function ChatBubble({ message, fontSize, isEditable, onWidgetAction, onOp
                   onClick={onEdit}
                   title="Koreksi Jawaban Terakhir"
                   style={{
-                    background: "transparent", border: "none", cursor: "pointer", 
+                    background: "transparent", border: "none", cursor: "pointer",
                     color: "var(--color-accent)", padding: 4, borderRadius: "50%",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     flexShrink: 0, marginTop: -2, marginRight: -6, opacity: 0.8,
@@ -118,7 +118,7 @@ export function ChatBubble({ message, fontSize, isEditable, onWidgetAction, onOp
               onMouseLeave={e => e.currentTarget.style.borderColor = "var(--color-border)"}
               onClick={() => {
                 // Trigger the hidden file input in ChatInput via a custom event
-                const ev = new CustomEvent("tahu:trigger-file-upload");
+                const ev = new CustomEvent("skorinaja:trigger-file-upload");
                 window.dispatchEvent(ev);
               }}
             >

@@ -1,4 +1,4 @@
-# TAHU Frontend — Dokumentasi Teknis & Arsitektur
+# skorinaja Frontend — Dokumentasi Teknis & Arsitektur
 > **Status:** Production-Ready Prototype (Backend Integration Phase Ready)  
 > **Stack:** Next.js 16.2.4 · React 19 · TypeScript · GSAP 3 · Recharts · Supabase JS  
 > **Terakhir diperbarui:** 23 April 2026
@@ -7,7 +7,7 @@
 
 ## 1. Gambaran Umum Proyek
 
-**TAHU (Teknologi Analisis Hablur Usaha)** adalah platform penilaian kredit UMKM berbasis AI. Alih-alih formulir panjang yang membingungkan, user diajak *ngobrol* santai melalui chatbot AI yang cerdas, kemudian sistem menganalisis data yang terkumpul dan menghasilkan **Credit Score terstruktur** dengan visualisasi dashboard yang premium.
+**skorinaja (Teknologi Analisis Hablur Usaha)** adalah platform penilaian kredit UMKM berbasis AI. Alih-alih formulir panjang yang membingungkan, user diajak *ngobrol* santai melalui chatbot AI yang cerdas, kemudian sistem menganalisis data yang terkumpul dan menghasilkan **Credit Score terstruktur** dengan visualisasi dashboard yang premium.
 
 ### Filosofi Desain
 
@@ -58,7 +58,7 @@ frontend/
 │   │   ├── ScoreBreakdownBar.tsx # (unused sementara, disimpan untuk V2)
 │   │   └── SubScoreCard.tsx      # Kartu metrik dengan badge bobot
 │   └── icons/
-│       └── TahuLogo.tsx
+│       └── skorinajaLogo.tsx
 │
 ├── hooks/
 │   └── useChatLogic.ts           # Core state machine chat
@@ -109,7 +109,7 @@ Semua animasi menggunakan GSAP 3 dengan `@gsap/react` hook (`useGSAP`). Pola sta
 [Landing Page]
       │
       ▼
-[/chat] ── Chatbot TAHU memulai percakapan
+[/chat] ── Chatbot skorinaja memulai percakapan
       │
       Step 1: Nama & jenis usaha
       │
@@ -268,7 +268,7 @@ Saat backend tersambung, `login()` digantikan oleh OAuth callback Supabase.
 
 - **3 State UI:**
   1. **Skeleton Loading** (600ms pertama sambil "fetch" data)
-  2. **Empty State** — jika `localStorage.tahu_last_session` kosong atau belum login
+  2. **Empty State** — jika `localStorage.skorinaja_last_session` kosong atau belum login
   3. **Data State** — Gauge + 4 Metric Cards + Loan Banner + CTA ke sesi detail
 - GSAP staggered reveal setelah loading selesai
 - Link ke `/dashboard/session-demo-001` sebagai demo

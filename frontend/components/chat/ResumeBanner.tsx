@@ -14,21 +14,21 @@ interface LastSession {
 
 export function ResumeBanner() {
   const [lastSession, setLastSession] = useState<LastSession | null>(null);
-  const [visible, setVisible]         = useState(false);
-  const [dismissed, setDismissed]     = useState(false);
-  const bannerRef                     = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const bannerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Hanya tampil jika ada sesi tersimpan di localStorage
     try {
-      const stored = localStorage.getItem("tahu_last_session");
+      const stored = localStorage.getItem("skorinaja_last_session");
       if (!stored) return; // User baru — jangan tampil sama sekali
 
       const parsed: LastSession = JSON.parse(stored);
       setLastSession(parsed);
 
       // Jangan tampil lagi kalau sudah di-dismiss di sesi ini
-      const wasDismissed = sessionStorage.getItem("tahu_banner_dismissed");
+      const wasDismissed = sessionStorage.getItem("skorinaja_banner_dismissed");
       if (wasDismissed) return;
 
       const t = setTimeout(() => setVisible(true), 800);
@@ -52,7 +52,7 @@ export function ResumeBanner() {
       opacity: 0, y: -16, scale: 0.97, duration: 0.3, ease: "power2.in",
       onComplete: () => {
         setDismissed(true);
-        sessionStorage.setItem("tahu_banner_dismissed", "1");
+        sessionStorage.setItem("skorinaja_banner_dismissed", "1");
       },
     });
   };
