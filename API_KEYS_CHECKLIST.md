@@ -71,6 +71,10 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxxxx
    ```
 9. **Authorized redirect URIs** (PENTING — harus exact match):
    ```
+
+   brlom yang mana
+
+   
    https://[supabase-ref].supabase.co/auth/v1/callback
    ```
    *(Supabase ref = bagian sebelum `.supabase.co` dari URL project kamu)*
