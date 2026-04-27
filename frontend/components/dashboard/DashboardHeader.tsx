@@ -1,5 +1,5 @@
 import { Menu } from "lucide-react";
-import { skorinajaLogo } from "../icons/skorinajaLogo";
+import { TahuLogo } from "../icons/TahuLogo";
 import Link from "next/link";
 import { useAuth } from "../../lib/auth-context";
 
@@ -25,7 +25,7 @@ export function DashboardHeader({ onOpenDrawer }: DashboardHeaderProps) {
 
         {/* Logo */}
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <skorinajaLogo size={28} />
+          <TahuLogo size={28} />
           <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1, userSelect: "none" }}>
             <span style={{ color: "var(--color-accent)", fontWeight: 800, fontSize: 15, letterSpacing: "-0.5px" }}>skorinaja</span>
             <span style={{ color: "var(--color-navy)", fontSize: 9, fontWeight: 700 }}>NILAI KREDIT AI</span>

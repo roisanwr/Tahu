@@ -7,7 +7,7 @@ interface SubScoreCardProps {
   value: string;
   score?: number; // 0–100
   weight?: string;
-  status: "good" | "warning" | "bad" | "info";
+  status: "good" | "warning" | "warn" | "bad" | "info";
   icon: LucideIcon;
   delay?: number;
 }
@@ -16,7 +16,8 @@ export function SubScoreCard({ title, value, score, weight, status, icon: Icon, 
   const getStatusStyle = () => {
     switch (status) {
       case "good": return { bg: "#E8F5EF", color: "#10B981" };
-      case "warning": return { bg: "#FEF3C7", color: "#F59E0B" };
+      case "warning":
+      case "warn": return { bg: "#FEF3C7", color: "#F59E0B" };
       case "bad": return { bg: "#FEE2E2", color: "#EF4444" };
       case "info": return { bg: "#EFF6FF", color: "#3B82F6" };
       default: return { bg: "var(--color-bg)", color: "var(--color-navy)" };

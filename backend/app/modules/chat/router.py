@@ -250,15 +250,16 @@ def _save_and_return(
         "current_stage": original_session.get("interview_stage"),
     }).execute()
 
-    # Save RINA response
+    # Save RINA response - we just pass the dict directly because the DB column is JSONB. 
+    # Supabase automatically serializes python dict to jsonb column.
     rina_msg_result = db.table("chat_history").insert({
         "session_id": session_id,
         "role": "assistant",
         "content": rina_response.get("message", ""),
         "ui_trigger": rina_response.get("ui_trigger"),
         "current_stage": rina_response.get("current_stage"),
-        "extracted_data": json.dumps(extracted or {}),
-        "flags": json.dumps(flags or {}),
+        "extracted_data": extracted or {},
+        "flags": flags or {},
     }).execute()
 
     rina_msg = rina_msg_result.data[0] if rina_msg_result.data else {}
@@ -292,16 +293,32 @@ async def get_messages(
         .execute()
     )
 
-    return [
-        MessageResponse(
-            message_id=m["id"],
-            role=m["role"],
-            content=m["content"],
-            ui_trigger=m.get("ui_trigger"),
-            current_stage=m.get("current_stage"),
-            extracted_fields=m.get("extracted_data") or {},
-            flags=m.get("flags") or {},
-            created_at=m["created_at"],
+    messages = []
+    for m in (result.data or []):
+        extracted = m.get("extracted_data") or {}
+        if isinstance(extracted, str):
+            try:
+                extracted = json.loads(extracted)
+            except:
+                extracted = {}
+                
+        flags = m.get("flags") or {}
+        if isinstance(flags, str):
+            try:
+                flags = json.loads(flags)
+            except:
+                flags = {}
+
+        messages.append(
+            MessageResponse(
+                message_id=m["id"],
+                role=m["role"],
+                content=m["content"],
+                ui_trigger=m.get("ui_trigger"),
+                current_stage=m.get("current_stage"),
+                extracted_fields=extracted,
+                flags=flags,
+                created_at=m["created_at"],
+            )
         )
-        for m in (result.data or [])
-    ]
+    return messages

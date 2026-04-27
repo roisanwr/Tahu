@@ -1,11 +1,11 @@
 import React from 'react';
 
-interface skorinajaLogoProps {
+interface TahuLogoProps {
   className?: string;
   size?: number;
 }
 
-export function skorinajaLogo({ className = "", size = 28 }: skorinajaLogoProps) {
+export function TahuLogo({ className = "", size = 28 }: TahuLogoProps) {
   return (
     <div
       className={className}
@@ -19,7 +19,7 @@ export function skorinajaLogo({ className = "", size = 28 }: skorinajaLogoProps)
         alignItems: "center",
         justifyContent: "center",
         fontWeight: 700,
-        fontSize: size * 0.53, // Adjust font size proportionally
+        fontSize: size * 0.53,
         fontStyle: "italic",
         userSelect: "none",
         flexShrink: 0

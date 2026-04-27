@@ -1,9 +1,9 @@
-import { skorinajaLogo } from "../icons/skorinajaLogo";
+import { TahuLogo } from "../icons/TahuLogo";
 
 export function ChatTypingIndicator() {
   return (
     <div className="gsap-typing" style={{ display: "flex", alignItems: "flex-end", gap: 8, justifyContent: "flex-start", opacity: 0 }}>
-      <skorinajaLogo size={28} />
+      <TahuLogo size={28} />
       <div style={{
         padding: "12px 14px",
         background: "var(--color-surface)",

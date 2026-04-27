@@ -1,17 +1,19 @@
 import { Message } from "../../hooks/useChatLogic";
-import { User, MapPin, Map, Camera, FileImage, Edit2 } from "lucide-react";
-import { skorinajaLogo } from "../icons/skorinajaLogo";
+import { User, MapPin, Map, Camera, FileImage, Edit2, CheckCircle2, BarChart2, ArrowRight, Loader2 } from "lucide-react";
+import { TahuLogo } from "../icons/TahuLogo";
+import Link from "next/link";
 
 interface ChatBubbleProps {
   message: Message;
   fontSize: string;
   isEditable?: boolean;
-  onWidgetAction?: (type: "location" | "upload" | "cancel_location", data?: unknown) => void;
+  isCompleting?: boolean;
+  onWidgetAction?: (type: "location" | "upload" | "cancel_location" | "cancel_upload" | "complete_session", data?: unknown) => void;
   onOpenMapSheet?: () => void;
   onEdit?: () => void;
 }
 
-export function ChatBubble({ message, fontSize, isEditable, onWidgetAction, onOpenMapSheet, onEdit }: ChatBubbleProps) {
+export function ChatBubble({ message, fontSize, isEditable, isCompleting, onWidgetAction, onOpenMapSheet, onEdit }: ChatBubbleProps) {
   const isUser = message.sender === "user";
 
   return (
@@ -20,7 +22,7 @@ export function ChatBubble({ message, fontSize, isEditable, onWidgetAction, onOp
       data-sender={message.sender}
       style={{ display: "flex", alignItems: "flex-end", gap: 8, justifyContent: isUser ? "flex-end" : "flex-start", opacity: 0 }}
     >
-      {!isUser && <skorinajaLogo size={28} />}
+      {!isUser && <TahuLogo size={28} />}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: "80%", alignItems: isUser ? "flex-end" : "flex-start", transition: "font-size 0.3s" }}>
         <div
@@ -139,6 +141,68 @@ export function ChatBubble({ message, fontSize, isEditable, onWidgetAction, onOp
                 <FileImage size={12} color="var(--color-accent)" />
                 <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-accent-dark)" }}>Dokumen diterima</span>
               </div>
+            </div>
+          )}
+
+          {/* ── Summary Card Widget ─────────────────────────────────── */}
+          {message.widget === "summary_card" && (
+            <div style={{ marginTop: 12, padding: 16, background: "var(--color-accent-light)", border: "1.5px solid var(--color-accent)", borderRadius: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <CheckCircle2 size={18} color="var(--color-accent)" strokeWidth={2.5} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-accent-dark)" }}>Profil siap dihitung!</span>
+              </div>
+              <p style={{ fontSize: 12, color: "var(--color-navy)", lineHeight: 1.5, margin: 0 }}>
+                Semua data sudah terkumpul. Klik tombol di bawah untuk menghitung skor kredit usahamu ya Kak 🎯
+              </p>
+              <button
+                onClick={() => onWidgetAction?.("complete_session")}
+                disabled={!!isCompleting}
+                style={{
+                  width: "100%", padding: "10px 16px",
+                  background: isCompleting ? "var(--color-text-muted)" : "var(--color-accent)",
+                  color: "#fff", border: "none", borderRadius: 8,
+                  fontSize: 13, fontWeight: 700, cursor: isCompleting ? "not-allowed" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={e => { if (!isCompleting) e.currentTarget.style.background = "var(--color-accent-dark)"; }}
+                onMouseLeave={e => { if (!isCompleting) e.currentTarget.style.background = "var(--color-accent)"; }}
+              >
+                {isCompleting
+                  ? (<><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Menghitung Skor...</>)
+                  : (<><BarChart2 size={14} /> Hitung Skor Kredit Sekarang</>)
+                }
+              </button>
+            </div>
+          )}
+
+          {/* ── Scoring Complete Widget ─────────────────────────────── */}
+          {message.widget === "scoring_complete" && message.scoringData && (
+            <div style={{ marginTop: 12, padding: 16, background: "linear-gradient(135deg, #E8F5EF, #F0FFF8)", border: "1.5px solid var(--color-accent)", borderRadius: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-accent)", marginBottom: 4 }}>Skor Kredit Usaha</div>
+                <div style={{ fontSize: 40, fontWeight: 800, color: "var(--color-navy)", lineHeight: 1, fontFamily: "var(--font-serif)" }}>
+                  {message.scoringData.finalScore}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 4 }}>dari 850</div>
+                <div style={{ marginTop: 8, display: "inline-block", padding: "4px 12px", background: "var(--color-accent)", color: "#fff", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+                  {message.scoringData.riskLevel}
+                </div>
+              </div>
+              <Link
+                href="/dashboard"
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  padding: "10px 16px",
+                  background: "var(--color-accent)", color: "#fff",
+                  borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: "none",
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--color-accent-dark)"}
+                onMouseLeave={e => e.currentTarget.style.background = "var(--color-accent)"}
+              >
+                <BarChart2 size={14} /> Lihat Dashboard Lengkap <ArrowRight size={14} />
+              </Link>
             </div>
           )}
 

@@ -30,6 +30,7 @@ export default function ChatPage() {
   const {
     messages, inputValue, setInputValue, isTyping, showLogin,
     handleSend, handleUndo, handleWidgetAction, handleFileUpload, handleFileCancel, handleGoogleLogin, currentStep,
+    isCompleting,
   } = useChatLogic();
 
   // Listen for custom event from ChatBubble upload_request widget
@@ -140,6 +141,7 @@ export default function ChatPage() {
                   message={msg}
                   fontSize={getFontSize()}
                   isEditable={isLatestUser}
+                  isCompleting={isCompleting}
                   onEdit={handleUndo}
                   onWidgetAction={handleWidgetAction}
                   onOpenMapSheet={() => setMapOpen(true)}

@@ -27,6 +27,7 @@ class Settings(BaseSettings):
 
     # ── Gemini AI ─────────────────────────────────────────────
     gemini_api_key: str
+    gemini_api_keys: str = ""  # Comma-separated tambahan keys untuk fallback/rotasi
     gemini_model: str = "gemini-2.0-flash"
 
     # ── Azure OCR (optional — stub jika belum ada) ────────────
@@ -49,6 +50,17 @@ class Settings(BaseSettings):
     @property
     def origins_list(self) -> List[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+
+    @property
+    def gemini_keys_all(self) -> List[str]:
+        """Semua Gemini API keys (primary + tambahan) sebagai unique list."""
+        keys = [self.gemini_api_key]
+        if self.gemini_api_keys:
+            for k in self.gemini_api_keys.split(","):
+                k = k.strip()
+                if k and k not in keys:
+                    keys.append(k)
+        return keys
 
     @property
     def azure_configured(self) -> bool:

@@ -1,6 +1,6 @@
 import { Dispatch, SetStateAction, useState } from "react";
 import { Menu, HelpCircle } from "lucide-react";
-import { skorinajaLogo } from "../icons/skorinajaLogo";
+import { TahuLogo } from "../icons/TahuLogo";
 
 interface ChatHeaderProps {
   onOpenDrawer: () => void;
@@ -66,7 +66,7 @@ export function ChatHeader({ onOpenDrawer, textSize, setTextSize, currentStep }:
 
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <skorinajaLogo size={28} />
+          <TahuLogo size={28} />
           <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1, userSelect: "none" }}>
             <span style={{ color: "var(--color-accent)", fontWeight: 800, fontSize: 15, letterSpacing: "-0.5px" }}>skorinaja</span>
             <span style={{ color: "var(--color-navy)", fontSize: 9, fontWeight: 700 }}>NILAI KREDIT AI</span>

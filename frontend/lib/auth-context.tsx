@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createBrowserClient } from "./supabase";
 
 export interface AuthUser {
   id: string;
@@ -12,46 +13,73 @@ export interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   isLoggedIn: boolean;
-  login: (user: AuthUser) => void;
-  logout: () => void;
+  token: string | null;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   isLoggedIn: false,
-  login: () => { },
-  logout: () => { },
+  token: null,
+  login: async () => {},
+  logout: async () => {},
 });
-
-const STORAGE_KEY = "skorinaja_auth_user";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const supabase = createBrowserClient();
 
-  // Restore session dari sessionStorage saat mount
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY);
-      if (stored) setUser(JSON.parse(stored));
-    } catch {
-      // Korup / tidak bisa di-parse — abaikan saja
-    }
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          name: session.user.user_metadata.full_name || session.user.email,
+          email: session.user.email!,
+          avatarUrl: session.user.user_metadata.avatar_url,
+        });
+        setToken(session.access_token);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          name: session.user.user_metadata.full_name || session.user.email,
+          email: session.user.email!,
+          avatarUrl: session.user.user_metadata.avatar_url,
+        });
+        setToken(session.access_token);
+      } else {
+        setUser(null);
+        setToken(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = (u: AuthUser) => {
-    setUser(u);
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+  const login = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      }
+    });
   };
 
-  const logout = () => {
-    setUser(null);
-    sessionStorage.removeItem(STORAGE_KEY);
-    sessionStorage.removeItem("skorinaja_banner_dismissed");
+  const logout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem("skorinaja_last_session");
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
