@@ -109,7 +109,7 @@ class OCRError(AppError):
     message = "Gagal memproses dokumen (Azure OCR error)"
 
 
-class GeminiError(AppError):
+class AIProviderError(AppError):
     status_code = 502
     code = "AI_ERROR"
     message = "Gagal memproses pesan AI"

@@ -25,10 +25,9 @@ class Settings(BaseSettings):
     supabase_service_role_key: str
     supabase_jwt_secret: str = ""   # optional — pakai untuk verify JWT offline
 
-    # ── Gemini AI ─────────────────────────────────────────────
-    gemini_api_key: str
-    gemini_api_keys: str = ""  # Comma-separated tambahan keys untuk fallback/rotasi
-    gemini_model: str = "gemini-2.0-flash"
+    # ── NVIDIA NIM AI ─────────────────────────────────────────
+    nvidia_api_key: str
+    nvidia_model: str = "deepseek-ai/deepseek-v3-0324"
 
     # ── Azure OCR (optional — stub jika belum ada) ────────────
     azure_document_endpoint: str = "https://placeholder.cognitiveservices.azure.com/"
@@ -51,16 +50,6 @@ class Settings(BaseSettings):
     def origins_list(self) -> List[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
-    @property
-    def gemini_keys_all(self) -> List[str]:
-        """Semua Gemini API keys (primary + tambahan) sebagai unique list."""
-        keys = [self.gemini_api_key]
-        if self.gemini_api_keys:
-            for k in self.gemini_api_keys.split(","):
-                k = k.strip()
-                if k and k not in keys:
-                    keys.append(k)
-        return keys
 
     @property
     def azure_configured(self) -> bool:
@@ -78,11 +67,16 @@ class Settings(BaseSettings):
             )
         return v.rstrip("/")
 
-    @field_validator("gemini_api_key")
+    @field_validator("nvidia_api_key")
     @classmethod
-    def validate_gemini_key(cls, v: str) -> str:
+    def validate_nvidia_api_key(cls, v: str) -> str:
         if not v or v in ("xxxx", "placeholder"):
-            raise ValueError("GEMINI_API_KEY belum diisi di .env")
+            raise ValueError("NVIDIA_API_KEY belum diisi di .env")
+        if not v.startswith("nvapi-"):
+            raise ValueError(
+                "NVIDIA_API_KEY tidak valid. Format: nvapi-<token> "
+                "(dapatkan dari build.nvidia.com)"
+            )
         return v
 
     @model_validator(mode="after")

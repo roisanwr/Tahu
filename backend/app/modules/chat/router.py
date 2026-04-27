@@ -13,9 +13,9 @@ from pydantic import BaseModel
 from supabase import Client
 
 from app.core.deps import CurrentUser, DBClient
-from app.core.errors import GeminiError, NotFoundError, RateLimitError
+from app.core.errors import AIProviderError, NotFoundError, RateLimitError
 from app.core.logging import get_logger
-from app.infra.ai.gemini import get_gemini_client
+from app.infra.ai.nvidia_models import get_nvidia_client
 from app.modules.chat.extractor import detect_contradiction, regex_extract
 from app.modules.chat.sanitizer import sanitize_user_input
 
@@ -120,16 +120,16 @@ async def send_message(
         "collected_fields": session.get("financial_snapshot") or {},
     }
 
-    # ── Panggil RINA (Gemini) ─────────────────────────────────
+    # ── Panggil RINA (NVIDIA NIM) ─────────────────────────────
     try:
-        gemini = get_gemini_client()
-        rina_response = await gemini.chat(
+        nvidia = get_nvidia_client()
+        rina_response = await nvidia.chat(
             user_message=clean_content,
             history=history,
             session_context=session_context,
         )
-    except GeminiError as exc:
-        logger.error("gemini_chat_failed", error=str(exc))
+    except AIProviderError as exc:
+        logger.error("nvidia_nim_chat_failed", error=str(exc))
         # Graceful fallback
         rina_response = {
             "message": "Maaf Kak, aku lagi ada gangguan sebentar 😅 Coba kirim lagi ya!",

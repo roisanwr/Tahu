@@ -162,7 +162,16 @@ export function useChatLogic() {
                     ? _uiTriggerToWidget(m.ui_trigger)
                     : undefined,
                 }));
-                setMessages(lastMessages);
+                // Tambahkan pesan sambutan agar user tahu ini adalah sesi lanjutan
+                setMessages([
+                  ...lastMessages,
+                  {
+                    id: "resume-banner",
+                    sender: "bot",
+                    text: "Selamat datang kembali Kak! 👋 Tadi kita sudah sampai sini, mau dilanjut?",
+                    time: formatTime(),
+                  }
+                ]);
                 setIsTyping(false);
                 return;
               }

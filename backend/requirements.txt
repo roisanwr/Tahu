@@ -7,8 +7,8 @@ python-multipart>=0.0.9
 python-dotenv>=1.0.0
 structlog>=24.1.0
 
-# AI — google-genai adalah SDK resmi terbaru (bukan google-generativeai yang deprecated)
-google-genai>=1.0.0
+# AI — OpenAI SDK untuk koneksi ke GitHub Models / Azure Inference
+openai>=1.14.0
 
 # Azure OCR (optional, stub mode jika tidak diinstall)
 azure-ai-documentintelligence>=1.0.0
