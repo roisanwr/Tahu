@@ -5,7 +5,7 @@ main.py — UMKM Credit Scoring Platform — FastAPI Backend
 Tech Stack : FastAPI + Uvicorn
 Database   : Supabase (PostgreSQL 15 + PostGIS)
 AI         : Gemini 1.5 Flash + Azure Document Intelligence
-Deploy     : Render.com / Koyeb
+Deploy     : Railway
 
 Run locally:
     uvicorn main:app --reload --port 8000
