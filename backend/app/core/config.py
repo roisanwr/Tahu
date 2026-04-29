@@ -25,9 +25,14 @@ class Settings(BaseSettings):
     supabase_service_role_key: str
     supabase_jwt_secret: str = ""   # optional — pakai untuk verify JWT offline
 
-    # ── NVIDIA NIM AI ─────────────────────────────────────────
-    nvidia_api_key: str
-    nvidia_model: str = "deepseek-ai/deepseek-v3-0324"
+    # ── NVIDIA NIM AI — Dual Model ────────────────────────────
+    # Model 1: z-ai/glm4.7  — untuk chat interview real-time (RINA)
+    nvidia_chat_api_key: str
+    nvidia_chat_model: str = "z-ai/glm4.7"
+
+    # Model 2: deepseek-ai/deepseek-v4-pro — untuk ekstraksi data & scoring
+    nvidia_extract_api_key: str
+    nvidia_extract_model: str = "deepseek-ai/deepseek-v4-pro"
 
     # ── Azure OCR (optional — stub jika belum ada) ────────────
     azure_document_endpoint: str = "https://placeholder.cognitiveservices.azure.com/"
@@ -50,7 +55,6 @@ class Settings(BaseSettings):
     def origins_list(self) -> List[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
-
     @property
     def azure_configured(self) -> bool:
         return (
@@ -67,14 +71,30 @@ class Settings(BaseSettings):
             )
         return v.rstrip("/")
 
-    @field_validator("nvidia_api_key")
+    @field_validator("nvidia_chat_api_key")
     @classmethod
-    def validate_nvidia_api_key(cls, v: str) -> str:
-        if not v or v in ("xxxx", "placeholder"):
-            raise ValueError("NVIDIA_API_KEY belum diisi di .env")
+    def validate_nvidia_chat_api_key(cls, v: str) -> str:
+        if not v or v in ("xxxx", "placeholder", ""):
+            raise ValueError(
+                "NVIDIA_CHAT_API_KEY belum diisi di .env — dibutuhkan untuk model chat (GLM4.7)"
+            )
         if not v.startswith("nvapi-"):
             raise ValueError(
-                "NVIDIA_API_KEY tidak valid. Format: nvapi-<token> "
+                "NVIDIA_CHAT_API_KEY tidak valid. Format: nvapi-<token> "
+                "(dapatkan dari build.nvidia.com)"
+            )
+        return v
+
+    @field_validator("nvidia_extract_api_key")
+    @classmethod
+    def validate_nvidia_extract_api_key(cls, v: str) -> str:
+        if not v or v in ("xxxx", "placeholder", ""):
+            raise ValueError(
+                "NVIDIA_EXTRACT_API_KEY belum diisi di .env — dibutuhkan untuk model ekstraksi (DeepSeek)"
+            )
+        if not v.startswith("nvapi-"):
+            raise ValueError(
+                "NVIDIA_EXTRACT_API_KEY tidak valid. Format: nvapi-<token> "
                 "(dapatkan dari build.nvidia.com)"
             )
         return v

@@ -74,9 +74,11 @@ export function useChatLogic() {
       ]);
       setShowLogin(true);
     } else if (isLoggedIn && token && !sessionId) {
+      // token sudah pasti tersedia di sini karena kondisi `&& token`
       setShowLogin(false);
-      initSession();
+      initSession(token);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, token]);
 
   // ── Progress step mapping ─────────────────────────────────
@@ -94,9 +96,9 @@ export function useChatLogic() {
   };
 
   // ── Session Initialization ────────────────────────────────
+  // Menerima token sebagai parameter eksplisit untuk menghindari stale closure
 
-  const initSession = async () => {
-    if (!token) return;
+  const initSession = async (activeToken: string) => {
     setIsTyping(true);
     try {
       // 1. Cek apakah sudah ada bisnis existing
@@ -104,16 +106,14 @@ export function useChatLogic() {
       let existingSessionId: string | null = null;
 
       const storedSession = localStorage.getItem("skorinaja_last_session");
-      const storedBiz = localStorage.getItem("skorinaja_last_business");
 
       const resBizList = await fetch(`${API_BASE_URL}/businesses`, {
-        headers: authHeaders(token),
+        headers: authHeaders(activeToken),
       });
 
       if (resBizList.ok) {
         const bizList = await resBizList.json();
         if (bizList.length > 0) {
-          // Pakai bisnis yang sudah ada
           bizId = bizList[0].id;
           setBusinessId(bizId);
         }
@@ -123,7 +123,7 @@ export function useChatLogic() {
         // Buat bisnis baru — user baru
         const resBiz = await fetch(`${API_BASE_URL}/businesses`, {
           method: "POST",
-          headers: authHeaders(token),
+          headers: authHeaders(activeToken),
           body: JSON.stringify({ business_name: "Usaha Saya" }),
         });
         if (!resBiz.ok) throw new Error("Gagal membuat profil bisnis");
@@ -136,19 +136,17 @@ export function useChatLogic() {
       // 2. Coba resume session yang tersimpan
       if (storedSession && bizId) {
         const resSess = await fetch(`${API_BASE_URL}/sessions/${storedSession}`, {
-          headers: authHeaders(token),
+          headers: authHeaders(activeToken),
         });
         if (resSess.ok) {
           const sess = await resSess.json();
-          // Resume hanya jika session masih active (belum complete)
           if (sess.status === "active" || sess.status === "pending_score") {
             existingSessionId = sess.session_id;
             setSessionId(existingSessionId);
             updateStepFromStage(sess.interview_stage);
 
-            // Load last few messages
             const resMsgs = await fetch(`${API_BASE_URL}/sessions/${existingSessionId}/messages`, {
-              headers: authHeaders(token),
+              headers: authHeaders(activeToken),
             });
             if (resMsgs.ok) {
               const msgs = await resMsgs.json();
@@ -158,11 +156,8 @@ export function useChatLogic() {
                   sender: m.role === "user" ? "user" : ("bot" as const),
                   text: m.content,
                   time: formatTime(),
-                  widget: m.ui_trigger
-                    ? _uiTriggerToWidget(m.ui_trigger)
-                    : undefined,
+                  widget: m.ui_trigger ? _uiTriggerToWidget(m.ui_trigger) : undefined,
                 }));
-                // Tambahkan pesan sambutan agar user tahu ini adalah sesi lanjutan
                 setMessages([
                   ...lastMessages,
                   {
@@ -183,7 +178,7 @@ export function useChatLogic() {
       // 3. Buat sesi baru
       const resSess = await fetch(`${API_BASE_URL}/sessions`, {
         method: "POST",
-        headers: authHeaders(token),
+        headers: authHeaders(activeToken),
         body: JSON.stringify({ business_id: bizId, mode: "basic" }),
       });
       if (!resSess.ok) throw new Error("Gagal membuat sesi");
@@ -192,8 +187,8 @@ export function useChatLogic() {
       setSessionId(newSessionId);
       localStorage.setItem("skorinaja_last_session", newSessionId);
 
-      // 4. Kirim pesan pembuka ke RINA
-      await sendMessageToBackend(newSessionId, "Halo");
+      // 4. Kirim pesan pembuka ke RINA (pass token eksplisit)
+      await sendMessageToBackend(newSessionId, "Halo", 0, activeToken);
     } catch (e: any) {
       console.error("initSession error:", e);
       addBot("Maaf, ada masalah saat mempersiapkan sesi ya Kak 😅 Coba refresh halaman ini.");
@@ -203,32 +198,61 @@ export function useChatLogic() {
 
   // ── Send message to RINA ──────────────────────────────────
 
-  const sendMessageToBackend = async (sid: string, text: string) => {
-    if (!token) return;
+  const sendMessageToBackend = async (
+    sid: string,
+    text: string,
+    _retryCount = 0,
+    // activeToken: token eksplisit dari initSession untuk menghindari stale closure.
+    // Saat kirim pesan biasa, cukup pakai token dari state.
+    activeToken?: string,
+  ) => {
+    const useToken = activeToken ?? token;
+    // Guard: jangan kirim kalau token belum ada (cegah "Bearer null")
+    if (!useToken) {
+      console.warn("sendMessageToBackend: token belum tersedia, skip.");
+      setIsTyping(false);
+      return;
+    }
     setIsTyping(true);
     try {
       const res = await fetch(`${API_BASE_URL}/sessions/${sid}/messages`, {
         method: "POST",
-        headers: authHeaders(token),
+        headers: authHeaders(useToken),
         body: JSON.stringify({ content: text, message_type: "text" }),
       });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
+
+        // 429 — rate limit
         if (res.status === 429) {
           addBot("Sebentar Kak, pesan terlalu cepat 😄 Tunggu 1 detik ya lalu kirim lagi!");
-        } else {
-          addBot(errData?.detail?.message || "Ups, koneksi terputus. Boleh diulang Kak?");
+          return;
         }
+
+        // 401 — token expired
+        if (res.status === 401) {
+          addBot("Sesi login kamu sudah berakhir. Silakan login ulang ya Kak 🙏");
+          return;
+        }
+
+        // 5xx — server error, coba 1x retry otomatis
+        if (res.status >= 500 && _retryCount < 1) {
+          await new Promise((r) => setTimeout(r, 1500));
+          return sendMessageToBackend(sid, text, _retryCount + 1, activeToken);
+        }
+
+        // Error lainnya
+        addBot(
+          errData?.detail?.message ||
+            "Ups, ada masalah saat memproses pesanmu. Coba lagi ya Kak 😊"
+        );
         return;
       }
 
       const data = await res.json();
-
-      // Update step from stage
       updateStepFromStage(data.current_stage);
 
-      // Map ui_trigger ke widget
       const extra: Partial<Message> = {};
       if (data.ui_trigger) {
         const widget = _uiTriggerToWidget(data.ui_trigger);
@@ -238,9 +262,17 @@ export function useChatLogic() {
       }
 
       addBot(data.content ?? data.message ?? "", extra);
-    } catch (e) {
+    } catch (e: any) {
+      // Network error — retry sekali
+      if (e?.name === "TypeError" && _retryCount < 1) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return sendMessageToBackend(sid, text, _retryCount + 1, activeToken);
+      }
       console.error("sendMessageToBackend error:", e);
-      addBot("Maaf, API Backend tidak merespon. Cek koneksi internet ya Kak.");
+      addBot("Maaf Kak, tidak bisa terhubung ke server. Cek koneksi internet ya! 🌐");
+    } finally {
+      // Pastikan isTyping selalu false setelah selesai (sukses atau gagal)
+      setIsTyping(false);
     }
   };
 

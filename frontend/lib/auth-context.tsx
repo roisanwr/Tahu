@@ -1,7 +1,15 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  ReactNode,
+} from "react";
 import { createBrowserClient } from "./supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface AuthUser {
   id: string;
@@ -29,30 +37,44 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const supabase = createBrowserClient();
+
+  // Gunakan ref agar Supabase client tidak dibuat ulang setiap render
+  const supabaseRef = useRef<SupabaseClient | null>(null);
+  if (!supabaseRef.current) {
+    supabaseRef.current = createBrowserClient();
+  }
+  const supabase = supabaseRef.current;
 
   useEffect(() => {
-    // Get initial session
+    // 1. Cek session yang sudah ada (misal dari cookie setelah OAuth callback)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser({
           id: session.user.id,
-          name: session.user.user_metadata.full_name || session.user.email,
+          name:
+            session.user.user_metadata?.full_name ??
+            session.user.email ??
+            "User",
           email: session.user.email!,
-          avatarUrl: session.user.user_metadata.avatar_url,
+          avatarUrl: session.user.user_metadata?.avatar_url,
         });
         setToken(session.access_token);
       }
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // 2. Listen perubahan auth state (login, logout, token refresh)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser({
           id: session.user.id,
-          name: session.user.user_metadata.full_name || session.user.email,
+          name:
+            session.user.user_metadata?.full_name ??
+            session.user.email ??
+            "User",
           email: session.user.email!,
-          avatarUrl: session.user.user_metadata.avatar_url,
+          avatarUrl: session.user.user_metadata?.avatar_url,
         });
         setToken(session.access_token);
       } else {
@@ -62,20 +84,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async () => {
+    // redirectTo: arahkan ke /chat setelah login Google berhasil
+    // sehingga Supabase tahu harus redirect ke mana dan token diproses oleh middleware
     await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: "google",
       options: {
-        redirectTo: window.location.origin,
-      }
+        redirectTo: `${window.location.origin}/chat`,
+      },
     });
   };
 
   const logout = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem("skorinaja_last_session");
+    localStorage.removeItem("skorinaja_last_business");
+    localStorage.removeItem("skorinaja_last_assessment");
   };
 
   return (

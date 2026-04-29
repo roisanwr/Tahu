@@ -66,7 +66,11 @@ export default function ChatPage() {
       );
     });
 
-    gsap.to(".typing-dot", { y: -4, duration: 0.3, stagger: 0.1, yoyo: true, repeat: -1, ease: "power1.inOut" });
+    // Typing indicator dot bounce
+    const dots = gsap.utils.toArray(".typing-dot");
+    if (dots.length > 0) {
+      gsap.to(dots, { y: -4, duration: 0.3, stagger: 0.1, yoyo: true, repeat: -1, ease: "power1.inOut" });
+    }
 
     // Login box
     gsap.utils.toArray<HTMLElement>(".gsap-login:not(.is-animated)").forEach(el => {

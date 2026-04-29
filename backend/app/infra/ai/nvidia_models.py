@@ -1,26 +1,43 @@
 """
-app/infra/ai/nvidia_models.py — NVIDIA NIM AI Client (RINA Chatbot)
-Menggunakan model via NVIDIA Inference Microservices (NIM) endpoint
-yang kompatibel dengan OpenAI SDK. Mendukung streaming & reasoning tokens.
+app/infra/ai/nvidia_models.py — NVIDIA NIM Dual-Model AI Client
+=================================================================
+
+Arsitektur: 2 model, 2 API key, 1 file.
+
+  GLMChatClient          → z-ai/glm4.7 (api_key_1)
+      └─ .chat()         → dipakai di chat/router.py (RINA interview)
+
+  DeepSeekExtractClient  → deepseek-ai/deepseek-v4-pro (api_key_2)
+      └─ .extract_fields() → dipakai di scoring pipeline
+
+Kedua client:
+  - Menggunakan AsyncOpenAI SDK dengan NVIDIA base_url
+  - asyncio.wait_for() timeout 60s agar tidak hang selamanya
+  - Retry 2x dengan exponential backoff (1s, 2s)
+  - Logging key_hint (12 char) untuk tracing tanpa expose secret
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import re
-from typing import Any, AsyncIterator
+from typing import Any
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, APITimeoutError, APIConnectionError, APIStatusError
 
 from app.core.errors import AIProviderError
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-# ── Konstanta model ────────────────────────────────────────────
+# ── Shared constants ───────────────────────────────────────────
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
-DEFAULT_MODEL   = "deepseek-ai/deepseek-v3-0324"
+_CHAT_TIMEOUT_S = 60        # timeout untuk GLM chat (lebih cepat)
+_EXTRACT_TIMEOUT_S = 180    # timeout untuk DeepSeek extraction (lebih lambat)
+_MAX_RETRIES = 2            # retry maksimum sebelum raise error
 
-# System prompt RINA — dari NUSA_CHAT_FLOW_MASTER_SPEC.md Section 1
+
+# ── System prompt RINA ─────────────────────────────────────────
 RINA_SYSTEM_PROMPT = """
 Kamu adalah "RINA", asisten AI ramah milik platform TAHU yang membantu
 pelaku UMKM menyiapkan profil usaha untuk penilaian kelayakan kredit.
@@ -78,31 +95,214 @@ Output HARUS selalu valid JSON. Tidak boleh ada teks di luar JSON.
 """
 
 
-class NvidiaModelsClient:
+# ── Base client ────────────────────────────────────────────────
+
+class _NvidiaBaseClient:
     """
-    Client untuk integrasi NVIDIA NIM (NVIDIA Inference Microservices).
-    Kompatibel dengan OpenAI SDK — menggunakan AsyncOpenAI dengan base_url custom.
-    Mendukung thinking/reasoning tokens pada model yang kompatibel.
+    Base class untuk semua NVIDIA NIM clients.
+    Menyediakan streaming completion dengan timeout dan retry.
     """
 
-    def __init__(self, api_key: str, model: str = DEFAULT_MODEL) -> None:
-        if not api_key:
-            raise AIProviderError("NVIDIA API key tidak boleh kosong.")
-
+    def __init__(self, api_key: str, model: str) -> None:
+        if not api_key or not api_key.startswith("nvapi-"):
+            raise AIProviderError(
+                f"NVIDIA API key tidak valid untuk model {model}. "
+                "Format: nvapi-<token>"
+            )
         self.model = model
         self._client = AsyncOpenAI(
             base_url=NVIDIA_BASE_URL,
             api_key=api_key,
         )
-
         logger.info(
-            "nvidia_nim_initialized",
+            "nvidia_client_initialized",
             model=model,
-            base_url=NVIDIA_BASE_URL,
             key_hint=api_key[:12] + "...",
         )
 
-    # ── Public API ─────────────────────────────────────────────
+    async def _stream_completion(
+        self,
+        messages: list[dict],
+        temperature: float = 0.7,
+        top_p: float = 0.95,
+        max_tokens: int = 4096,
+        extra_body: dict | None = None,
+        timeout_s: int = _CHAT_TIMEOUT_S,
+    ) -> tuple[str, str]:
+        """
+        Streaming completion dengan timeout dan retry.
+
+        Returns:
+            (content, reasoning) — keduanya string.
+
+        Raises:
+            AIProviderError — setelah semua retry habis.
+        """
+        last_exc: Exception | None = None
+
+        for attempt in range(1, _MAX_RETRIES + 2):  # attempt 1, 2, 3
+            try:
+                content, reasoning = await asyncio.wait_for(
+                    self._do_stream(
+                        messages=messages,
+                        temperature=temperature,
+                        top_p=top_p,
+                        max_tokens=max_tokens,
+                        extra_body=extra_body,
+                    ),
+                    timeout=timeout_s,
+                )
+                return content, reasoning
+
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "nvidia_stream_timeout",
+                    model=self.model,
+                    attempt=attempt,
+                    timeout_s=timeout_s,
+                )
+                last_exc = asyncio.TimeoutError(
+                    f"NVIDIA stream timeout setelah {timeout_s}s"
+                )
+
+            except (APIConnectionError, APITimeoutError) as exc:
+                logger.warning(
+                    "nvidia_connection_error",
+                    model=self.model,
+                    attempt=attempt,
+                    error=str(exc),
+                )
+                last_exc = exc
+
+            except APIStatusError as exc:
+                # 4xx errors — jangan retry, langsung raise
+                logger.error(
+                    "nvidia_api_status_error",
+                    model=self.model,
+                    status_code=exc.status_code,
+                    error=str(exc),
+                )
+                raise AIProviderError(
+                    f"NVIDIA API error {exc.status_code}: {exc.message}"
+                ) from exc
+
+            except Exception as exc:
+                logger.error(
+                    "nvidia_unexpected_error",
+                    model=self.model,
+                    attempt=attempt,
+                    error=str(exc),
+                )
+                last_exc = exc
+
+            # Backoff sebelum retry: 1s, 2s
+            if attempt <= _MAX_RETRIES:
+                backoff = attempt  # 1s, 2s
+                logger.info(
+                    "nvidia_retry_backoff",
+                    model=self.model,
+                    attempt=attempt,
+                    backoff_s=backoff,
+                )
+                await asyncio.sleep(backoff)
+
+        raise AIProviderError(
+            f"NVIDIA NIM ({self.model}) gagal setelah {_MAX_RETRIES + 1} percobaan: {last_exc}"
+        ) from last_exc
+
+    async def _do_stream(
+        self,
+        messages: list[dict],
+        temperature: float,
+        top_p: float,
+        max_tokens: int,
+        extra_body: dict | None,
+    ) -> tuple[str, str]:
+        """Satu percobaan streaming tanpa retry."""
+        kwargs: dict[str, Any] = dict(
+            model=self.model,
+            messages=messages,  # type: ignore[arg-type]
+            temperature=temperature,
+            top_p=top_p,
+            max_tokens=max_tokens,
+            stream=True,
+        )
+        if extra_body:
+            kwargs["extra_body"] = extra_body
+
+        content_parts: list[str] = []
+        reasoning_parts: list[str] = []
+
+        stream = await self._client.chat.completions.create(**kwargs)
+
+        async for chunk in stream:
+            if not getattr(chunk, "choices", None):
+                continue
+            if not chunk.choices:
+                continue
+
+            delta = chunk.choices[0].delta
+
+            # Reasoning tokens (DeepSeek-R1 style)
+            reasoning = (
+                getattr(delta, "reasoning", None)
+                or getattr(delta, "reasoning_content", None)
+            )
+            if reasoning:
+                reasoning_parts.append(reasoning)
+
+            if delta.content is not None:
+                content_parts.append(delta.content)
+
+        return "".join(content_parts), "".join(reasoning_parts)
+
+    @staticmethod
+    def _parse_json(raw_text: str, model_name: str) -> dict[str, Any]:
+        """
+        Parse JSON dari raw response.
+        Fallback ke regex extraction jika ada text preamble di luar JSON.
+        """
+        text = raw_text.strip()
+        # Hapus markdown code fences jika ada
+        if text.startswith("```"):
+            text = re.sub(r"^```(?:json)?\n?", "", text)
+            text = re.sub(r"\n?```$", "", text)
+            text = text.strip()
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # Fallback: cari blok JSON di dalam teks
+        json_match = re.search(r"\{[\s\S]*\}", text)
+        if json_match:
+            try:
+                return json.loads(json_match.group())
+            except json.JSONDecodeError:
+                pass
+
+        logger.error(
+            "nvidia_invalid_json_response",
+            model=model_name,
+            raw_preview=raw_text[:300],
+        )
+        raise AIProviderError(
+            f"Response dari {model_name} bukan valid JSON. "
+            f"Preview: {raw_text[:100]}"
+        )
+
+
+# ── GLM Chat Client ────────────────────────────────────────────
+
+class GLMChatClient(_NvidiaBaseClient):
+    """
+    Client untuk z-ai/glm4.7 — digunakan untuk chat interview RINA.
+    Optimized untuk percakapan natural berbahasa Indonesia.
+    """
+
+    def __init__(self, api_key: str, model: str = "z-ai/glm4.7") -> None:
+        super().__init__(api_key=api_key, model=model)
 
     async def chat(
         self,
@@ -111,37 +311,91 @@ class NvidiaModelsClient:
         session_context: dict | None = None,
     ) -> dict[str, Any]:
         """
-        Kirim pesan ke RINA dan dapatkan JSON response yang sudah di-parse.
+        Kirim pesan ke RINA (GLM model) dan dapatkan JSON response yang sudah di-parse.
 
-        Alur:
-        1. Build messages list (system + history + user).
-        2. Panggil NVIDIA NIM endpoint dengan streaming.
-        3. Kumpulkan reasoning tokens (thinking) dan content tokens.
-        4. Parse JSON dari final content.
+        Args:
+            user_message: pesan dari user
+            history: list of {"role": "user"|"model", "content": str}
+            session_context: {"interview_stage", "progress_pct", "collected_fields"}
+
+        Returns:
+            dict dengan keys: message, current_stage, ui_trigger,
+                              extracted_fields, updated_fields, flags
         """
-        messages = self._build_messages(user_message, history, session_context)
+        messages = self._build_chat_messages(user_message, history, session_context)
 
         try:
             raw_content, reasoning = await self._stream_completion(
                 messages=messages,
-                temperature=0.7,
-                top_p=0.95,
+                temperature=1.0,    # GLM4.7 optimal di temperature=1
+                top_p=1.0,
                 max_tokens=4096,
             )
+        except AIProviderError:
+            raise
         except Exception as exc:
-            logger.error("nvidia_nim_chat_error", error=str(exc), model=self.model)
-            raise AIProviderError(f"NVIDIA NIM chat error: {exc}") from exc
+            logger.error("glm_chat_error", error=str(exc))
+            raise AIProviderError(f"GLM chat error: {exc}") from exc
 
         if reasoning:
-            logger.debug("nvidia_nim_reasoning_captured", chars=len(reasoning))
+            logger.debug("glm_reasoning_captured", chars=len(reasoning))
 
-        return self._parse_json(raw_content)
+        return self._parse_json(raw_content, self.model)
+
+    def _build_chat_messages(
+        self,
+        user_message: str,
+        history: list[dict],
+        session_context: dict | None,
+    ) -> list[dict]:
+        """Susun messages list sesuai format OpenAI Chat Completions."""
+        context_prefix = ""
+        if session_context:
+            context_prefix = (
+                f"[KONTEKS SESI]\n"
+                f"Stage: {session_context.get('interview_stage', 'intro')}\n"
+                f"Progress: {session_context.get('progress_pct', 0)}%\n"
+                f"Data terkumpul: {json.dumps(session_context.get('collected_fields', {}), ensure_ascii=False)}\n"
+                f"[PESAN USER]\n"
+            )
+
+        messages: list[dict] = [{"role": "system", "content": RINA_SYSTEM_PROMPT}]
+
+        for msg in history[-20:]:
+            role = "user" if msg["role"] == "user" else "assistant"
+            messages.append({"role": role, "content": msg["content"]})
+
+        messages.append({"role": "user", "content": context_prefix + user_message})
+        return messages
+
+
+# ── DeepSeek Extract Client ────────────────────────────────────
+
+class DeepSeekExtractClient(_NvidiaBaseClient):
+    """
+    Client untuk deepseek-ai/deepseek-v4-pro — digunakan untuk ekstraksi data
+    terstruktur dari chat history (scoring pipeline).
+    Optimized untuk determinisme dan akurasi JSON output.
+    """
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "deepseek-ai/deepseek-v4-pro",
+    ) -> None:
+        super().__init__(api_key=api_key, model=model)
 
     async def extract_fields(self, chat_history_text: str) -> dict[str, Any]:
         """
         Ekstrak semua field terstruktur dari full chat history.
         Dipakai oleh scoring pipeline, bukan per-turn.
         Menggunakan temperature rendah untuk determinisme.
+
+        Args:
+            chat_history_text: seluruh chat history sebagai teks
+
+        Returns:
+            dict dengan semua field yang berhasil diekstrak, null jika tidak ada
         """
         extraction_prompt = (
             "Ekstrak semua data terstruktur dari percakapan berikut.\n"
@@ -165,140 +419,79 @@ class NvidiaModelsClient:
         try:
             raw_content, _ = await self._stream_completion(
                 messages=messages,
-                temperature=0.1,
+                temperature=0.1,    # rendah untuk konsistensi output
                 top_p=0.95,
                 max_tokens=2048,
+                extra_body={"chat_template_kwargs": {"thinking": False}},
+                timeout_s=_EXTRACT_TIMEOUT_S,   # 180s — DeepSeek perlu waktu lebih
             )
-            return json.loads(raw_content or "{}")
+            # DeepSeek kadang wrap dalam markdown — _parse_json sudah handle ini
+            return self._parse_json(raw_content, self.model)
+        except AIProviderError:
+            # Jika extract gagal, return empty — jangan crash scoring pipeline
+            logger.error(
+                "deepseek_extraction_failed",
+                model=self.model,
+            )
+            return {}
         except json.JSONDecodeError as exc:
-            logger.error("nvidia_nim_extraction_invalid_json", error=str(exc))
+            logger.error("deepseek_extraction_invalid_json", error=str(exc))
             return {}
         except Exception as exc:
-            logger.error("nvidia_nim_extraction_error", error=str(exc))
+            logger.error("deepseek_extraction_unexpected_error", error=str(exc))
             return {}
 
-    # ── Internal helpers ───────────────────────────────────────
 
-    def _build_messages(
-        self,
-        user_message: str,
-        history: list[dict],
-        session_context: dict | None,
-    ) -> list[dict]:
-        """Susun daftar messages sesuai format OpenAI Chat Completions."""
-        context_prefix = ""
-        if session_context:
-            context_prefix = (
-                f"[KONTEKS SESI]\n"
-                f"Stage: {session_context.get('interview_stage', 'intro')}\n"
-                f"Progress: {session_context.get('progress_pct', 0)}%\n"
-                f"Data terkumpul: {json.dumps(session_context.get('collected_fields', {}), ensure_ascii=False)}\n"
-                f"[PESAN USER]\n"
-            )
+# ── Singletons ─────────────────────────────────────────────────
 
-        messages: list[dict] = [{"role": "system", "content": RINA_SYSTEM_PROMPT}]
-
-        # Ambil maks 20 history terakhir
-        for msg in history[-20:]:
-            role = "user" if msg["role"] == "user" else "assistant"
-            messages.append({"role": role, "content": msg["content"]})
-
-        messages.append({"role": "user", "content": context_prefix + user_message})
-        return messages
-
-    async def _stream_completion(
-        self,
-        messages: list[dict],
-        temperature: float = 0.7,
-        top_p: float = 0.95,
-        max_tokens: int = 4096,
-    ) -> tuple[str, str]:
-        """
-        Jalankan streaming completion dan kumpulkan konten + reasoning.
-
-        Returns:
-            (content, reasoning) — keduanya string.
-        """
-        content_parts: list[str] = []
-        reasoning_parts: list[str] = []
-
-        stream = await self._client.chat.completions.create(
-            model=self.model,
-            messages=messages,  # type: ignore[arg-type]
-            temperature=temperature,
-            top_p=top_p,
-            max_tokens=max_tokens,
-            stream=True,
-        )
-
-        async for chunk in stream:
-            if not getattr(chunk, "choices", None):
-                continue
-
-            delta = chunk.choices[0].delta
-
-            # Tangkap reasoning/thinking tokens (DeepSeek-R1 style)
-            reasoning = (
-                getattr(delta, "reasoning", None)
-                or getattr(delta, "reasoning_content", None)
-            )
-            if reasoning:
-                reasoning_parts.append(reasoning)
-
-            # Tangkap content tokens
-            if delta.content is not None:
-                content_parts.append(delta.content)
-
-        return "".join(content_parts), "".join(reasoning_parts)
-
-    def _parse_json(self, raw_text: str) -> dict[str, Any]:
-        """
-        Parse JSON dari raw response.
-        Fallback ke regex extraction jika ada text preamble di luar JSON.
-        """
-        try:
-            return json.loads(raw_text.strip())
-        except json.JSONDecodeError:
-            json_match = re.search(r"\{[\s\S]*\}", raw_text)
-            if json_match:
-                try:
-                    return json.loads(json_match.group())
-                except json.JSONDecodeError:
-                    pass
-
-        logger.error(
-            "nvidia_nim_invalid_json",
-            raw_preview=raw_text[:300],
-            model=self.model,
-        )
-        raise AIProviderError("Response RINA tidak valid JSON dari NVIDIA NIM.")
+_chat_singleton: GLMChatClient | None = None
+_extract_singleton: DeepSeekExtractClient | None = None
 
 
-# ── Singleton factory ──────────────────────────────────────────
-
-_nvidia_singleton: NvidiaModelsClient | None = None
-
-
-def get_nvidia_client() -> NvidiaModelsClient:
+def get_chat_client() -> GLMChatClient:
     """
-    Kembalikan singleton NvidiaModelsClient.
+    Kembalikan singleton GLMChatClient (z-ai/glm4.7).
+    Dipakai di chat/router.py untuk interview RINA.
     Lazy-init saat pertama kali dipanggil.
     """
     import app.infra.ai.nvidia_models as _mod
 
-    if _mod._nvidia_singleton is None:
+    if _mod._chat_singleton is None:
         from app.core.config import get_settings
-
         cfg = get_settings()
-        _mod._nvidia_singleton = NvidiaModelsClient(
-            api_key=cfg.nvidia_api_key,
-            model=cfg.nvidia_model,
+        _mod._chat_singleton = GLMChatClient(
+            api_key=cfg.nvidia_chat_api_key,
+            model=cfg.nvidia_chat_model,
         )
-    return _mod._nvidia_singleton
+    return _mod._chat_singleton
 
 
-def reset_nvidia_client() -> None:
-    """Reset singleton — berguna saat testing atau hot-reload config."""
+def get_extraction_client() -> DeepSeekExtractClient:
+    """
+    Kembalikan singleton DeepSeekExtractClient (deepseek-ai/deepseek-v4-pro).
+    Dipakai di scoring pipeline untuk ekstraksi data terstruktur.
+    Lazy-init saat pertama kali dipanggil.
+    """
     import app.infra.ai.nvidia_models as _mod
 
-    _mod._nvidia_singleton = None
+    if _mod._extract_singleton is None:
+        from app.core.config import get_settings
+        cfg = get_settings()
+        _mod._extract_singleton = DeepSeekExtractClient(
+            api_key=cfg.nvidia_extract_api_key,
+            model=cfg.nvidia_extract_model,
+        )
+    return _mod._extract_singleton
+
+
+def reset_nvidia_clients() -> None:
+    """Reset semua singleton — berguna saat testing atau hot-reload config."""
+    import app.infra.ai.nvidia_models as _mod
+    _mod._chat_singleton = None
+    _mod._extract_singleton = None
+
+
+# ── Backward compatibility alias (untuk kode yang belum dimigrate) ──
+def get_nvidia_client() -> GLMChatClient:
+    """Alias ke get_chat_client() untuk backward compatibility."""
+    return get_chat_client()

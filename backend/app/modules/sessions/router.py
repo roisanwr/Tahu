@@ -241,16 +241,22 @@ async def complete_session(
     # Save to credit_assessments
     import uuid as uuid_lib
     assessment_id = str(uuid_lib.uuid4())
+
+    # Helper: safely extract .raw dari SubScoreBreakdown
+    def _score(pillar: str) -> float | None:
+        sb = result.sub_scores.get(pillar)
+        return sb.raw if sb else None
+
     db.table("credit_assessments").upsert({
         "id": assessment_id,
         "session_id": str(session_id),
         "final_score": result.final_score,
         "risk_level": result.risk_level,
-        "score_financial": result.sub_scores.get("financial", {}).raw if result.sub_scores.get("financial") else None,
-        "score_collateral": result.sub_scores.get("collateral", {}).raw if result.sub_scores.get("collateral") else None,
-        "score_experience": result.sub_scores.get("experience", {}).raw if result.sub_scores.get("experience") else None,
-        "score_location": result.sub_scores.get("location", {}).raw if result.sub_scores.get("location") else None,
-        "score_character": result.sub_scores.get("character", {}).raw if result.sub_scores.get("character") else None,
+        "score_financial": _score("financial"),
+        "score_collateral": _score("collateral"),
+        "score_experience": _score("experience"),
+        "score_location": _score("location"),
+        "score_character": _score("character"),
         "raw_scores": result.raw_scores.model_dump(),
         "weights": result.weights,
         "confidence_multipliers": result.confidence_multipliers,
@@ -263,6 +269,7 @@ async def complete_session(
         "loan_max_amount": result.loan_recommendation.max_amount,
         "loan_tenor_months": result.loan_recommendation.tenor_months,
         "loan_interest_range": result.loan_recommendation.interest_range,
+        "explanation": result.explanation or "",
         "contradiction_count_snapshot": session.get("contradiction_count") or 0,
     }, on_conflict="session_id").execute()
 
@@ -294,6 +301,15 @@ def _verify_ownership(db, session_id: str, user_id: str) -> dict:
 
 
 def _to_response(s: dict) -> SessionResponse:
+    import json
+    
+    financial = s.get("financial_snapshot")
+    if isinstance(financial, str):
+        try:
+            financial = json.loads(financial)
+        except Exception:
+            financial = {}
+
     return SessionResponse(
         session_id=s["id"],
         business_id=s["business_id"],
@@ -304,7 +320,7 @@ def _to_response(s: dict) -> SessionResponse:
         progress_pct=s.get("progress_pct", 0),
         contradiction_count=s.get("contradiction_count", 0),
         injection_attempt_count=s.get("injection_attempt_count", 0),
-        financial_snapshot=s.get("financial_snapshot"),
+        financial_snapshot=financial,
         created_at=s["created_at"],
         last_active_at=s.get("last_active_at"),
     )

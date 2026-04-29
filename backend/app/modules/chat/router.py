@@ -15,7 +15,7 @@ from supabase import Client
 from app.core.deps import CurrentUser, DBClient
 from app.core.errors import AIProviderError, NotFoundError, RateLimitError
 from app.core.logging import get_logger
-from app.infra.ai.nvidia_models import get_nvidia_client
+from app.infra.ai.nvidia_models import get_chat_client
 from app.modules.chat.extractor import detect_contradiction, regex_extract
 from app.modules.chat.sanitizer import sanitize_user_input
 
@@ -120,23 +120,29 @@ async def send_message(
         "collected_fields": session.get("financial_snapshot") or {},
     }
 
-    # ── Panggil RINA (NVIDIA NIM) ─────────────────────────────
+    # ── Panggil RINA (GLM4.7 via NVIDIA NIM) ────────────────────
     try:
-        nvidia = get_nvidia_client()
-        rina_response = await nvidia.chat(
+        chat_client = get_chat_client()
+        rina_response = await chat_client.chat(
             user_message=clean_content,
             history=history,
             session_context=session_context,
         )
     except AIProviderError as exc:
-        logger.error("nvidia_nim_chat_failed", error=str(exc))
-        # Graceful fallback
+        logger.error("glm_chat_failed", error=str(exc), stage=session.get("interview_stage"))
+        # Graceful fallback — pesan berbeda agar tidak terlihat sama terus
+        import random
+        fallback_messages = [
+            "Maaf Kak, koneksi ke AI lagi gangguan sebentar 😅 Coba kirim lagi ya!",
+            "Ups, ada masalah teknis sebentar. Kirim ulang pesanmu ya Kak 🙏",
+            "Sebentar ya Kak, lagi ada kendala koneksi. Boleh diulangi? 😊",
+        ]
         rina_response = {
-            "message": "Maaf Kak, aku lagi ada gangguan sebentar 😅 Coba kirim lagi ya!",
+            "message": random.choice(fallback_messages),
             "current_stage": session.get("interview_stage", "profil"),
             "ui_trigger": None,
             "extracted_fields": {},
-            "flags": {"data_flag": "sufficient"},
+            "flags": {"data_flag": "sufficient", "ai_error": True},
         }
 
     # ── Process extracted fields ─────────────────────────────
