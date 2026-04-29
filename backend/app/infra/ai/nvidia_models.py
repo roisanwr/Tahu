@@ -329,7 +329,8 @@ class GLMChatClient(_NvidiaBaseClient):
                 messages=messages,
                 temperature=1.0,    # GLM4.7 optimal di temperature=1
                 top_p=1.0,
-                max_tokens=4096,
+                max_tokens=16384,
+                extra_body={"chat_template_kwargs":{"enable_thinking":True,"clear_thinking":False}},
             )
         except AIProviderError:
             raise

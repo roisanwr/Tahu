@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     azure_document_endpoint: str = "https://placeholder.cognitiveservices.azure.com/"
     azure_document_key: str = "placeholder"
 
+    # ── GitHub Models (Primary AI Provider — optional) ─────────
+    # Jika dikonfigurasi → GitHub Models jadi primary, NVIDIA jadi fallback.
+    # Jika dikosongkan → NVIDIA digunakan langsung (mode lama).
+    github_token: str = ""
+    github_model: str = "gpt-4o-mini"
+
     # ── CORS ──────────────────────────────────────────────────
     allowed_origins: str = "http://localhost:3000"
     frontend_url: str = "http://localhost:3000"
@@ -61,6 +67,11 @@ class Settings(BaseSettings):
             self.azure_document_key != "placeholder"
             and "placeholder" not in self.azure_document_endpoint
         )
+
+    @property
+    def github_configured(self) -> bool:
+        """True jika GitHub Token sudah diisi."""
+        return bool(self.github_token)
 
     @field_validator("supabase_url")
     @classmethod

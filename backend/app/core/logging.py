@@ -44,34 +44,59 @@ def get_logger(name: str = __name__) -> structlog.BoundLogger:
     return structlog.get_logger(name)
 
 
-class RequestIDMiddleware(BaseHTTPMiddleware):
-    """Injects unique request_id ke setiap request untuk correlation logging."""
+class RequestIDMiddleware:
+    """Injects unique request_id ke setiap request untuk correlation logging (Pure ASGI)."""
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())[:8]
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope: dict, receive: Callable, send: Callable) -> None:
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+
+        # Ambil request_id dari header atau generate baru
+        req_id = ""
+        for name, value in scope.get("headers", []):
+            if name.lower() == b"x-request-id":
+                req_id = value.decode("latin1")
+                break
+        
+        if not req_id:
+            req_id = str(uuid.uuid4())[:8]
+
         token = request_id_var.set(req_id)
 
         # Bind to structlog context
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(
             request_id=req_id,
-            method=request.method,
-            path=request.url.path,
+            method=scope.get("method", ""),
+            path=scope.get("path", ""),
         )
 
         logger = get_logger("http")
         start = time.perf_counter()
 
+        status_code = 500
+
+        async def send_wrapper(message: dict) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message.get("status", 500)
+                # Attach X-Request-ID
+                headers = message.setdefault("headers", [])
+                headers.append((b"x-request-id", req_id.encode("latin1")))
+            await send(message)
+
         try:
-            response = await call_next(request)
+            await self.app(scope, receive, send_wrapper)
             duration_ms = (time.perf_counter() - start) * 1000
             logger.info(
                 "request_completed",
-                status_code=response.status_code,
+                status_code=status_code,
                 duration_ms=round(duration_ms, 2),
             )
-            response.headers["X-Request-ID"] = req_id
-            return response
         except Exception as exc:
             duration_ms = (time.perf_counter() - start) * 1000
             logger.error(

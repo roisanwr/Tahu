@@ -15,7 +15,7 @@ from supabase import Client
 from app.core.deps import CurrentUser, DBClient
 from app.core.errors import AIProviderError, NotFoundError, RateLimitError
 from app.core.logging import get_logger
-from app.infra.ai.nvidia_models import get_chat_client
+from app.infra.ai.fallback_router import get_chat_client
 from app.modules.chat.extractor import detect_contradiction, regex_extract
 from app.modules.chat.sanitizer import sanitize_user_input
 

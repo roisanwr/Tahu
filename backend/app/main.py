@@ -76,8 +76,22 @@ async def app_error_handler(request: Request, exc: AppError):
 
 @app.exception_handler(Exception)
 async def unhandled_error_handler(request: Request, exc: Exception):
+    from postgrest.exceptions import APIError
     from app.core.errors import InternalError
     from app.core.logging import get_request_id
+    
+    if isinstance(exc, APIError):
+        logger.error("database_api_error", error=str(exc), error_type="APIError")
+        if exc.code == "PGRST116":
+            return JSONResponse(
+                status_code=404,
+                content={"error": {"code": "NOT_FOUND", "message": "Data tidak ditemukan", "request_id": get_request_id()}}
+            )
+        return JSONResponse(
+            status_code=500,
+            content={"error": {"code": "DB_ERROR", "message": exc.message, "request_id": get_request_id()}}
+        )
+
     logger.error("unhandled_exception", error=str(exc), error_type=type(exc).__name__)
     err = InternalError(str(exc))
     return JSONResponse(

@@ -44,6 +44,16 @@ async def create_business(
     db: DBClient,
 ) -> BusinessResponse:
     """Buat profil usaha baru."""
+    # Pastikan user profile ada sebelum membuat bisnis (menghindari FK violation)
+    try:
+        db.table("user_profiles").upsert({
+            "id": user["id"],
+            "email": user["email"],
+            "full_name": user.get("full_name") or "User"
+        }).execute()
+    except Exception as e:
+        logger.warning("failed_to_upsert_user_profile", error=str(e))
+
     result = db.table("business_profiles").insert({
         "user_id": user["id"],
         "business_name": body.business_name,
