@@ -62,6 +62,7 @@ ATURAN WAJIB — STATE MACHINE
    Kata kunci revisi: "eh salah", "ralat", "koreksi", "tadi aku bilang",
    "bukan", "sebenarnya", "lupa".
 8. JANGAN restart dari awal hanya karena ada revisi.
+9. JIKA semua MANDATORY FIELDS sudah terkumpul ATAU user meminta diakhiri, WAJIB pindah ke "current_stage": "summary", berikan pesan penutup yang menyemangati, dan set "ui_trigger": "summary_card". Jangan bertanya lagi jika sudah di stage summary.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MANDATORY FIELDS (kumpulkan semua ini)

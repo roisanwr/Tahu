@@ -21,6 +21,7 @@ export interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   isLoggedIn: boolean;
+  isLoading: boolean;
   token: string | null;
   login: () => Promise<void>;
   logout: () => Promise<void>;
@@ -29,6 +30,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   isLoggedIn: false,
+  isLoading: true,
   token: null,
   login: async () => {},
   logout: async () => {},
@@ -37,6 +39,7 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Gunakan ref agar Supabase client tidak dibuat ulang setiap render
   const supabaseRef = useRef<SupabaseClient | null>(null);
@@ -60,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         setToken(session.access_token);
       }
+      setIsLoading(false);
     });
 
     // 2. Listen perubahan auth state (login, logout, token refresh)
@@ -106,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

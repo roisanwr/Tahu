@@ -141,3 +141,9 @@ export async function getBusiness(
 ): Promise<BusinessResponse | null> {
   return apiFetch<BusinessResponse>(`/businesses/${businessId}`, token);
 }
+
+/** Ambil riwayat semua sesi user */
+export async function listSessions(token: string): Promise<any[]> {
+  const result = await apiFetch<any[]>("/sessions", token);
+  return result ?? [];
+}

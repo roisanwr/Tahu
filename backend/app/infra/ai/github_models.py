@@ -41,6 +41,7 @@ ATURAN WAJIB — STATE MACHINE
    Kata kunci revisi: "eh salah", "ralat", "koreksi", "tadi aku bilang",
    "bukan", "sebenarnya", "lupa".
 8. JANGAN restart dari awal hanya karena ada revisi.
+9. JIKA semua MANDATORY FIELDS sudah terkumpul ATAU user meminta diakhiri, WAJIB pindah ke "current_stage": "summary", berikan pesan penutup yang menyemangati, dan set "ui_trigger": "summary_card". Jangan bertanya lagi jika sudah di stage summary.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MANDATORY FIELDS (kumpulkan semua ini)
@@ -124,12 +125,18 @@ class GitHubModelsClient:
                 model=self.model,
                 temperature=0.7,
                 max_tokens=2048,
-                response_format={"type": "json_object"},
+                # Tidak pakai response_format=json_object — GitHub Models API
+                # mensyaratkan kata 'json' di SEMUA messages jika pakai mode ini,
+                # yang tidak selalu terpenuhi. JSON di-parse manual via _parse_json().
             )
             raw_text = response.choices[0].message.content
             return self._parse_json(raw_text or "")
         except Exception as exc:
-            logger.error("github_models_error", error=str(exc))
+            logger.error(
+                "github_models_chat_error",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             raise AIProviderError(f"GitHub Models error: {exc}") from exc
 
     async def extract_fields(self, chat_history_text: str) -> dict[str, Any]:
@@ -148,7 +155,7 @@ class GitHubModelsClient:
         )
 
         messages = [
-            {"role": "system", "content": "Kamu adalah data extractor. Return JSON only."},
+            {"role": "system", "content": "Kamu adalah data extractor. Output harus selalu berupa JSON valid."},
             {"role": "user", "content": extraction_prompt}
         ]
 
@@ -157,12 +164,24 @@ class GitHubModelsClient:
                 messages=messages,
                 model=self.model,
                 temperature=0.1,
-                response_format={"type": "json_object"},
+                # Tidak pakai response_format=json_object — parse manual lebih aman
+                # untuk GitHub Models API (lihat catatan di method chat())
             )
-            raw_text = response.choices[0].message.content
-            return json.loads(raw_text or "{}")
+            raw_text = response.choices[0].message.content or "{}"
+            try:
+                return json.loads(raw_text.strip())
+            except json.JSONDecodeError:
+                import re
+                match = re.search(r'\{[\s\S]*\}', raw_text)
+                if match:
+                    return json.loads(match.group())
+                return {}
         except Exception as exc:
-            logger.error("github_models_extraction_error", error=str(exc))
+            logger.error(
+                "github_models_extraction_error",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return {}
 
     def _parse_json(self, raw_text: str) -> dict[str, Any]:

@@ -81,6 +81,19 @@ async def create_session(body: SessionCreate, user: CurrentUser, db: DBClient) -
     return _to_response(s)
 
 
+@router.get("")
+async def list_sessions(user: CurrentUser, db: DBClient) -> list[dict]:
+    """Ambil semua sesi wawancara milik user ini (terbaru di atas)."""
+    result = (
+        db.table("sessions")
+        .select("*, business_profiles!inner(user_id, business_name), credit_assessments(final_score, risk_level)")
+        .eq("user_id", user["id"])
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return result.data or []
+
+
 @router.get("/{session_id}", response_model=SessionResponse)
 async def get_session(session_id: UUID, user: CurrentUser, db: DBClient) -> SessionResponse:
     result = (

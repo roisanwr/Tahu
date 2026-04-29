@@ -30,7 +30,7 @@ export default function ChatPage() {
   const {
     messages, inputValue, setInputValue, isTyping, showLogin,
     handleSend, handleUndo, handleWidgetAction, handleFileUpload, handleFileCancel, handleGoogleLogin, currentStep,
-    isCompleting,
+    isCompleting, sessionId
   } = useChatLogic();
 
   // Listen for custom event from ChatBubble upload_request widget
@@ -99,11 +99,21 @@ export default function ChatPage() {
     setMapOpen(false);
   };
 
+  const handleNewChat = () => {
+    localStorage.removeItem("skorinaja_last_session");
+    window.location.reload();
+  };
+
   return (
     <div style={{ display: "flex", width: "100%", height: "100vh", backgroundColor: "var(--color-bg)", fontFamily: "sans-serif", overflow: "hidden" }}>
 
       {/* Drawer */}
-      <ChatDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <ChatDrawer 
+        isOpen={drawerOpen} 
+        onClose={() => setDrawerOpen(false)} 
+        activeSessionId={sessionId}
+        onNewChat={handleNewChat}
+      />
 
       {/* Map Bottom Sheet */}
       <MapBottomSheet

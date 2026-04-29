@@ -4,44 +4,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, X, Home, ChevronRight, BarChart2, Clock, LogIn, LogOut, PlusCircle, LayoutDashboard, Settings } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { EditProfileModal, BusinessProfileData } from "../dashboard/EditProfileModal";
+import { listSessions } from "../../lib/api";
 
 interface ChatDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  activeSessionId?: string | null;
+  onNewChat?: () => void;
 }
 
-const MOCK_SESSIONS = [
-  {
-    id: "session-demo-001",
-    name: "Warung Sembako Bu Sari",
-    score: 712,
-    scoreLabel: "Risiko Rendah",
-    scoreColor: "#2563EB",
-    date: "23 Apr 2026",
-  },
-  {
-    id: "session-demo-002",
-    name: "Toko Online Budi Jaya",
-    score: 641,
-    scoreLabel: "Risiko Rendah",
-    scoreColor: "#2563EB",
-    date: "22 Apr 2026",
-  },
-  {
-    id: "session-demo-003",
-    name: "Jasa Ojek Pak Andi",
-    score: 498,
-    scoreLabel: "Risiko Tinggi",
-    scoreColor: "#C2410C",
-    date: "20 Apr 2026",
-  },
-];
-
-export function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
-  const { user, isLoggedIn, logout } = useAuth();
+export function ChatDrawer({ isOpen, onClose, activeSessionId, onNewChat }: ChatDrawerProps) {
+  const { user, isLoggedIn, logout, token } = useAuth();
   const router = useRouter();
+
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [isLoadingSess, setIsLoadingSess] = useState(false);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [profileData, setProfileData] = useState<BusinessProfileData>({
@@ -58,6 +37,17 @@ export function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
     onClose();
     router.push("/");
   };
+
+  useEffect(() => {
+    if (isOpen && isLoggedIn && token) {
+      setIsLoadingSess(true);
+      listSessions(token).then(data => {
+        setSessions(data || []);
+      }).finally(() => {
+        setIsLoadingSess(false);
+      });
+    }
+  }, [isOpen, isLoggedIn, token]);
 
   return (
     <>
@@ -185,45 +175,72 @@ export function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <Clock size={12} color="var(--color-text-muted)" />
                   <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-muted)" }}>
-                    Bisnis Saya
+                    Riwayat Sesi
                   </span>
                 </div>
-                <Link
-                  href="/chat"
-                  onClick={onClose}
+                <button
+                  onClick={() => {
+                    onClose();
+                    if (onNewChat) onNewChat();
+                  }}
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 4,
                     fontSize: 11, fontWeight: 700, color: "var(--color-accent)",
-                    textDecoration: "none", transition: "opacity 0.2s",
+                    background: "transparent", border: "none", cursor: "pointer",
+                    transition: "opacity 0.2s", padding: 0
                   }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = "0.8"}
+                  onMouseLeave={e => e.currentTarget.style.opacity = "1"}
                 >
                   <PlusCircle size={12} strokeWidth={2.5} />
-                  Tambah Usaha
-                </Link>
+                  Chat Baru
+                </button>
               </div>
 
               <div style={{ flex: 1, overflowY: "auto", padding: "0 12px 8px", display: "flex", flexDirection: "column", gap: 2 }}>
-                {MOCK_SESSIONS.map(s => (
-                  <Link
-                    key={s.id}
-                    href={`/dashboard/${s.id}`}
-                    onClick={onClose}
-                    style={{ textDecoration: "none", display: "flex", flexDirection: "column", gap: 5, padding: "11px 12px", borderRadius: 10, border: "1px solid transparent", transition: "all 0.2s" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "var(--color-bg)"; e.currentTarget.style.borderColor = "var(--color-border)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; }}
-                  >
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-navy)", lineHeight: 1.35 }}>{s.name}</span>
-                      <ChevronRight size={12} color="var(--color-text-muted)" style={{ flexShrink: 0, marginTop: 2 }} />
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <BarChart2 size={11} color={s.scoreColor} />
-                      <span style={{ fontSize: 12, fontWeight: 800, color: s.scoreColor, fontVariantNumeric: "tabular-nums" }}>{s.score}</span>
-                      <span style={{ fontSize: 10, color: "var(--color-text-muted)", fontWeight: 600 }}>{s.scoreLabel}</span>
-                      <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--color-text-muted)" }}>{s.date}</span>
-                    </div>
-                  </Link>
-                ))}
+                {isLoadingSess ? (
+                  <div style={{ padding: 12, textAlign: "center", fontSize: 12, color: "var(--color-text-muted)" }}>
+                    Memuat...
+                  </div>
+                ) : sessions.length === 0 ? (
+                  <div style={{ padding: 12, textAlign: "center", fontSize: 12, color: "var(--color-text-muted)" }}>
+                    Belum ada riwayat.
+                  </div>
+                ) : (
+                  sessions.map(s => {
+                    const isActive = s.id === activeSessionId;
+                    const bizName = s.business_profiles?.business_name || "Sesi Penilaian";
+                    
+                    return (
+                      <Link
+                        key={s.id}
+                        href={`/dashboard/${s.id}`}
+                        onClick={onClose}
+                        style={{
+                          textDecoration: "none", display: "flex", flexDirection: "column", gap: 5, padding: "11px 12px", 
+                          borderRadius: 10, border: "1px solid transparent", transition: "all 0.2s",
+                          background: isActive ? "var(--color-accent-light)" : "transparent",
+                          borderColor: isActive ? "var(--color-border)" : "transparent"
+                        }}
+                        onMouseEnter={e => { if(!isActive) { e.currentTarget.style.background = "var(--color-bg)"; e.currentTarget.style.borderColor = "var(--color-border)"; } }}
+                        onMouseLeave={e => { if(!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; } }}
+                      >
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: isActive ? 800 : 700, color: "var(--color-navy)", lineHeight: 1.35 }}>{bizName}</span>
+                          <ChevronRight size={12} color="var(--color-text-muted)" style={{ flexShrink: 0, marginTop: 2 }} />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 10, color: "var(--color-text-muted)", fontWeight: 600 }}>
+                            {s.status === 'completed' ? 'Selesai' : s.status === 'pending_score' ? 'Menunggu Skor' : 'Aktif'}
+                          </span>
+                          <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--color-text-muted)" }}>
+                            {new Date(s.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })
+                )}
               </div>
             </>
           )}
@@ -300,8 +317,8 @@ export function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
             </button>
           )}
 
-          <div style={{ fontSize: 10, color: "var(--color-text-muted)", textAlign: "center", marginTop: 8, opacity: 0.6 }}>
-            skorinaja v0.1 · Data simulasi
+          <div style={{ fontSize: 11, color: "var(--color-text-muted)", textAlign: "center", marginTop: 12, opacity: 0.8, paddingBottom: 16 }}>
+            TAHU v0.1 · Beta
           </div>
         </div>
       </div>

@@ -79,6 +79,7 @@ class FallbackChatRouter:
                 "chat_primary_failed_fallback_nvidia",
                 provider="github_models",
                 error=str(primary_exc),
+                error_type=type(primary_exc).__name__,
                 fallback_to="nvidia_glm4.7",
             )
 
@@ -143,6 +144,7 @@ class FallbackExtractRouter:
                 "extract_primary_failed_fallback_nvidia",
                 provider="github_models",
                 error=str(primary_exc),
+                error_type=type(primary_exc).__name__,
                 fallback_to="nvidia_deepseek",
             )
 

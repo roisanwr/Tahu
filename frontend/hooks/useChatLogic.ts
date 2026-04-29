@@ -47,7 +47,7 @@ function authHeaders(token: string) {
 
 export function useChatLogic() {
   const router = useRouter();
-  const { isLoggedIn, login, token } = useAuth();
+  const { isLoggedIn, login, token, isLoading } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -63,6 +63,8 @@ export function useChatLogic() {
   // ── Initial state based on Auth ──────────────────────────
 
   useEffect(() => {
+    if (isLoading) return;
+    
     if (!isLoggedIn) {
       setMessages([
         {
@@ -79,7 +81,7 @@ export function useChatLogic() {
       initSession(token);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn, token]);
+  }, [isLoggedIn, token, isLoading]);
 
   // ── Progress step mapping ─────────────────────────────────
 
@@ -111,6 +113,13 @@ export function useChatLogic() {
         headers: authHeaders(activeToken),
       });
 
+      if (resBizList.status === 401) {
+        // Token expired atau tidak valid
+        addBot("Sesi login kamu sudah berakhir. Silakan login ulang ya Kak 🙏");
+        setIsTyping(false);
+        return;
+      }
+
       if (resBizList.ok) {
         const bizList = await resBizList.json();
         if (bizList.length > 0) {
@@ -126,7 +135,10 @@ export function useChatLogic() {
           headers: authHeaders(activeToken),
           body: JSON.stringify({ business_name: "Usaha Saya" }),
         });
-        if (!resBiz.ok) throw new Error("Gagal membuat profil bisnis");
+        if (!resBiz.ok) {
+          const errData = await resBiz.json().catch(() => ({}));
+          throw new Error(`Gagal membuat profil bisnis (${resBiz.status}): ${errData?.detail?.message ?? ""}`); 
+        }
         const biz = await resBiz.json();
         bizId = biz.id;
         setBusinessId(bizId);
@@ -172,6 +184,9 @@ export function useChatLogic() {
               }
             }
           }
+        } else if (resSess.status !== 404) {
+          // Session lama tidak valid, hapus dari storage
+          localStorage.removeItem("skorinaja_last_session");
         }
       }
 
@@ -181,7 +196,10 @@ export function useChatLogic() {
         headers: authHeaders(activeToken),
         body: JSON.stringify({ business_id: bizId, mode: "basic" }),
       });
-      if (!resSess.ok) throw new Error("Gagal membuat sesi");
+      if (!resSess.ok) {
+        const errData = await resSess.json().catch(() => ({}));
+        throw new Error(`Gagal membuat sesi (${resSess.status}): ${errData?.detail?.message ?? ""}`);
+      }
       const sess = await resSess.json();
       const newSessionId = sess.session_id;
       setSessionId(newSessionId);
@@ -190,8 +208,13 @@ export function useChatLogic() {
       // 4. Kirim pesan pembuka ke RINA (pass token eksplisit)
       await sendMessageToBackend(newSessionId, "Halo", 0, activeToken);
     } catch (e: any) {
-      console.error("initSession error:", e);
-      addBot("Maaf, ada masalah saat mempersiapkan sesi ya Kak 😅 Coba refresh halaman ini.");
+      console.error("[initSession] error:", e?.message ?? e);
+      // Jika network error total
+      if (e?.name === "TypeError" || e?.message?.includes("fetch")) {
+        addBot("Tidak bisa terhubung ke server. Pastikan koneksi internet kamu aktif ya Kak 🌐");
+      } else {
+        addBot("Maaf, ada masalah saat mempersiapkan sesi ya Kak 😅 Coba refresh halaman ini.");
+      }
       setIsTyping(false);
     }
   };
