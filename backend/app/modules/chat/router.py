@@ -1,14 +1,15 @@
 """
-app/modules/chat/router.py — Chat Endpoints (Optimized V2)
+app/modules/chat/router.py — Chat Endpoints (V3 — Full Flow Fix)
 POST /v1/sessions/{session_id}/messages  → Kirim pesan ke RINA
 GET  /v1/sessions/{session_id}/messages  → Ambil history
 
-Optimization log (V2):
-  - Rate limit: pindah ke in-memory (eliminasi 1 DB query ~100-200ms)
-  - History query: gabung dengan session verify jika memungkinkan
-  - Save messages: tetap sinkron karena Supabase client blocking,
-    tapi jumlah query dikurangi dari 7 → 5
-  - History limit: 10 messages (turun dari 20)
+V3 changelog:
+  - Sync extracted fields ke business_profiles (sebelumnya hilang)
+  - Auto-calculate progress_pct dari mandatory fields
+  - Auto-advance interview_stage berdasarkan field completion
+  - Type coercion: string → int/float/bool sebelum save ke DB
+  - Context prefix kirim "Field BELUM terkumpul" ke AI
+  - Filter error messages dari history
 """
 from __future__ import annotations
 
@@ -25,6 +26,9 @@ from app.core.deps import CurrentUser, DBClient
 from app.core.errors import AIProviderError, NotFoundError, RateLimitError
 from app.core.logging import get_logger
 from app.infra.ai.fallback_router import get_chat_client
+from app.infra.ai.system_prompt import (
+    MANDATORY_FIELDS, STAGE_FIELDS, STAGE_ORDER,
+)
 from app.modules.chat.extractor import detect_contradiction, regex_extract
 from app.modules.chat.sanitizer import sanitize_user_input
 
@@ -32,11 +36,95 @@ logger = get_logger(__name__)
 router = APIRouter(tags=["Chat"])
 
 # ── In-memory rate limiter (menggantikan DB query) ────────────
-# Key: user_id → timestamp terakhir kirim pesan
 _last_message_ts: dict[str, float] = defaultdict(float)
 _RATE_LIMIT_SECONDS = 1.0
 
-_MAX_HISTORY = 10  # jumlah history yang dikirim ke AI (turun dari 20)
+_MAX_HISTORY = 10
+
+# ── Mapping extracted_fields → business_profiles columns ──────
+_BP_FIELD_MAP: dict[str, str] = {
+    "owner_name": "owner_name",
+    "business_name": "business_name",
+    "business_category": "category",
+    "years_operating": "years_operating",
+    "employee_count": "employee_count",
+    "has_fixed_location": "has_fixed_location",
+    "location_address": "location_address",
+    "has_prev_loan": "has_prev_loan",
+    "prev_loan_status": "prev_loan_status",
+    "prev_loan_amount": "prev_loan_amount",
+    "loan_count": "loan_count",
+    "has_wa_business": "has_wa_business",
+    "marketplace_platform": "marketplace_platform",
+    "has_qris": "has_qris",
+    "has_ewallet": "has_ewallet",
+    "asset_type": "asset_type",
+}
+
+# ── Type coercion config ──────────────────────────────────────
+_NUMERIC_FIELDS: dict[str, type] = {
+    "years_operating": float,
+    "employee_count": int,
+    "monthly_revenue": int,
+    "monthly_expense": int,
+    "transaction_frequency_daily": int,
+    "assets_estimate": int,
+    "prev_loan_amount": int,
+    "loan_count": int,
+}
+
+_BOOLEAN_FIELDS: list[str] = [
+    "has_fixed_location", "has_prev_loan", "has_wa_business",
+    "has_qris", "has_ewallet",
+]
+
+
+def _coerce_extracted(extracted: dict) -> dict:
+    """Coerce string values ke tipe yang benar untuk DB columns."""
+    result = dict(extracted)
+    for field, target_type in _NUMERIC_FIELDS.items():
+        if field in result and result[field] is not None:
+            try:
+                val = result[field]
+                if isinstance(val, str):
+                    val = val.replace(",", "").replace(".", "").strip()
+                result[field] = target_type(val)
+            except (ValueError, TypeError):
+                pass  # biarkan apa adanya
+    for field in _BOOLEAN_FIELDS:
+        if field in result and result[field] is not None:
+            val = result[field]
+            if isinstance(val, str):
+                result[field] = val.lower() in ("true", "ya", "iya", "yes", "1", "tetap", "tetep", "ada", "punya")
+    return result
+
+
+def _compute_progress(snapshot: dict) -> int:
+    """Hitung progress_pct berdasarkan mandatory fields yang sudah terisi."""
+    if not snapshot:
+        return 0
+    filled = sum(1 for f in MANDATORY_FIELDS if snapshot.get(f) is not None and snapshot.get(f) != "")
+    return int(filled / len(MANDATORY_FIELDS) * 100)
+
+
+def _compute_stage(snapshot: dict) -> str:
+    """Tentukan interview_stage berdasarkan field completion."""
+    if not snapshot:
+        return "intro"
+    for stage in STAGE_ORDER:
+        if stage in ("dokumen", "summary"):
+            continue
+        fields = STAGE_FIELDS.get(stage, [])
+        if not fields:
+            continue
+        if not all(snapshot.get(f) is not None and snapshot.get(f) != "" for f in fields):
+            return stage
+    return "summary"
+
+
+def _get_missing_fields(snapshot: dict, current_stage: str) -> list[str]:
+    """Dapatkan daftar SEMUA mandatory fields yang belum terkumpul."""
+    return [f for f in MANDATORY_FIELDS if not snapshot.get(f)]
 
 
 class SendMessageRequest(BaseModel):
@@ -63,7 +151,7 @@ async def send_message(
     db: DBClient,
 ) -> MessageResponse:
     """Kirim pesan ke RINA dan simpan ke chat_history."""
-    # ── Rate limit: in-memory (menghilangkan 1 DB query) ─────
+    # ── Rate limit: in-memory ─────────────────────────────────
     now = time.monotonic()
     user_id = user["id"]
     if (now - _last_message_ts[user_id]) < _RATE_LIMIT_SECONDS:
@@ -73,14 +161,13 @@ async def send_message(
         )
     _last_message_ts[user_id] = now
 
-    # ── Verify session belongs to user ──────────────────────
+    # ── Verify session belongs to user ────────────────────────
     session = _get_session(db, str(session_id), user_id)
 
-    # ── Sanitize input ───────────────────────────────────────
+    # ── Sanitize input ────────────────────────────────────────
     clean_content, injection_detected = sanitize_user_input(body.content)
 
     if injection_detected:
-        # Update injection counter
         new_count = (session.get("injection_attempt_count") or 0) + 1
         db.table("sessions").update(
             {"injection_attempt_count": new_count}
@@ -89,7 +176,6 @@ async def send_message(
         if new_count >= 3:
             logger.warning("injection_threshold_exceeded", session_id=str(session_id))
 
-        # Return RINA's deflection response (tidak pass ke LLM)
         deflection = {
             "message": "Hmm, aku nggak terlalu ngerti maksudnya Kak 😄 Yuk kita lanjut — tadi kita lagi bahas soal profil usaha kamu!",
             "current_stage": session.get("interview_stage", "profil"),
@@ -105,10 +191,10 @@ async def send_message(
             original_session=session,
         )
 
-    # ── Get chat history (last 10 messages — turun dari 20) ──
+    # ── Get chat history ──────────────────────────────────────
     history_result = (
         db.table("chat_history")
-        .select("role, content")
+        .select("role, content, current_stage, extracted_data")
         .eq("session_id", str(session_id))
         .order("created_at", desc=False)
         .limit(_MAX_HISTORY)
@@ -116,29 +202,57 @@ async def send_message(
     )
     history = []
     for m in (history_result.data or []):
+        # ── FILTER AI ERROR / FALLBACK MESSAGES ──
+        if m["role"] == "assistant":
+            content_lower = m["content"].lower()
+            if any(kw in content_lower for kw in [
+                "kendala koneksi", "masalah teknis", "kurang fokus",
+                "gangguan sebentar", "kirim ulang", "coba lagi"
+            ]):
+                continue
+
         role = "model" if m["role"] == "assistant" else m["role"]
         content = m["content"]
-        
-        # ── ANTI-POISONING FIX ──
-        # Assistant messages di DB disimpan sebagai PLAIN TEXT.
-        # Kalau dikirim apa adanya, model akan mimic plain text dan GAGAL JSON output.
-        # Jadi kita "bungkus" lagi jadi JSON string sebelum dikirim ke AI.
+
+        # ── ANTI-POISONING: rebuild full JSON structure ──
         if role == "model":
             try:
-                json.loads(content)
-            except ValueError:
-                content = json.dumps({"message": content})
-                
+                parsed = json.loads(content)
+                if "extracted_fields" not in parsed:
+                    parsed["extracted_fields"] = m.get("extracted_data") or {}
+                    content = json.dumps(parsed, ensure_ascii=False)
+            except (ValueError, TypeError):
+                content = json.dumps({
+                    "message": content,
+                    "current_stage": m.get("current_stage") or "profil",
+                    "extracted_fields": m.get("extracted_data") or {},
+                    "flags": {}
+                }, ensure_ascii=False)
+
         history.append({"role": role, "content": content})
 
-    # ── Session context untuk RINA ───────────────────────────
+    # ── Build session context ─────────────────────────────────
+    # Parse financial_snapshot safely
+    snapshot = session.get("financial_snapshot")
+    if isinstance(snapshot, str):
+        try:
+            snapshot = json.loads(snapshot)
+        except (ValueError, TypeError):
+            snapshot = {}
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+
+    current_stage = session.get("interview_stage", "intro")
+    missing = _get_missing_fields(snapshot, current_stage)
+
     session_context = {
-        "interview_stage": session.get("interview_stage", "intro"),
-        "progress_pct": session.get("progress_pct", 0),
-        "collected_fields": session.get("financial_snapshot") or {},
+        "interview_stage": current_stage,
+        "progress_pct": _compute_progress(snapshot),
+        "collected_fields": snapshot,
+        "missing_fields": missing,
     }
 
-    # ── Panggil RINA (via FallbackRouter) ────────────────────
+    # ── Panggil RINA (via FallbackRouter) ─────────────────────
     try:
         chat_client = get_chat_client()
         rina_response = await chat_client.chat(
@@ -147,8 +261,7 @@ async def send_message(
             session_context=session_context,
         )
     except AIProviderError as exc:
-        logger.error("glm_chat_failed", error=str(exc), stage=session.get("interview_stage"))
-        # Graceful fallback — pesan berbeda agar tidak terlihat sama terus
+        logger.error("glm_chat_failed", error=str(exc), stage=current_stage)
         import random
         fallback_messages = [
             "Maaf Kak, koneksi ke AI lagi gangguan sebentar 😅 Coba kirim lagi ya!",
@@ -157,14 +270,15 @@ async def send_message(
         ]
         rina_response = {
             "message": random.choice(fallback_messages),
-            "current_stage": session.get("interview_stage", "profil"),
+            "current_stage": current_stage,
             "ui_trigger": None,
             "extracted_fields": {},
             "flags": {"data_flag": "sufficient", "ai_error": True},
         }
 
-    # ── Process extracted fields ─────────────────────────────
-    extracted = rina_response.get("extracted_fields", {})
+    # ── Process & coerce extracted fields ─────────────────────
+    raw_extracted = rina_response.get("extracted_fields", {})
+    extracted = _coerce_extracted(raw_extracted)
     flags = rina_response.get("flags", {})
     updated_fields = rina_response.get("updated_fields", {})
 
@@ -174,10 +288,13 @@ async def send_message(
             regex_val = regex_extract(field_name, clean_content)
             llm_val = extracted.get(field_name)
             if regex_val and llm_val:
-                delta_pct = abs(regex_val - llm_val) / max(abs(llm_val), 1) * 100
-                if delta_pct > 30:
-                    flags["discrepancy_detected"] = True
-                    flags["discrepancy_field"] = field_name
+                try:
+                    delta_pct = abs(regex_val - int(llm_val)) / max(abs(int(llm_val)), 1) * 100
+                    if delta_pct > 30:
+                        flags["discrepancy_detected"] = True
+                        flags["discrepancy_field"] = field_name
+                except (ValueError, TypeError):
+                    pass
 
     # Detect contradiction
     contradiction_count = session.get("contradiction_count", 0)
@@ -196,35 +313,66 @@ async def send_message(
                     session_id=str(session_id),
                 )
 
-    # ── Update session state ─────────────────────────────────
-    new_stage = rina_response.get("current_stage", session.get("interview_stage"))
+    # ── Update financial snapshot (accumulate) ────────────────
+    if extracted:
+        snapshot.update({k: v for k, v in extracted.items() if v is not None})
+
+    # ── Compute progress & stage (backend-driven) ─────────────
+    new_progress = _compute_progress(snapshot)
+    computed_stage = _compute_stage(snapshot)
+
+    # Gunakan stage dari backend logic (lebih reliable daripada AI)
+    # Kecuali AI explicitly bilang "summary"
+    ai_stage = rina_response.get("current_stage")
+    if ai_stage == "summary":
+        new_stage = "summary"
+    else:
+        new_stage = computed_stage
+
+    # ── Build session update ──────────────────────────────────
     session_updates: dict = {
         "interview_stage": new_stage,
+        "progress_pct": new_progress,
         "contradiction_count": contradiction_count,
+        "financial_snapshot": snapshot if snapshot else None,
     }
 
-    # Update financial snapshot with extracted fields
-    if extracted:
-        current_snapshot = session.get("financial_snapshot") or {}
-        current_snapshot.update({k: v for k, v in extracted.items() if v is not None})
-        session_updates["financial_snapshot"] = json.dumps(current_snapshot)
-        # Propagate critical fields ke session columns
-        if "monthly_revenue" in extracted:
-            session_updates["monthly_revenue"] = extracted["monthly_revenue"]
-        if "monthly_expense" in extracted:
-            session_updates["monthly_expense"] = extracted["monthly_expense"]
-        if "transaction_frequency_daily" in extracted:
-            session_updates["transaction_frequency_daily"] = extracted["transaction_frequency_daily"]
-        if "assets_estimate" in extracted:
-            session_updates["assets_estimate"] = extracted["assets_estimate"]
+    # Propagate critical financial fields ke session columns
+    for field, col in [
+        ("monthly_revenue", "monthly_revenue"),
+        ("monthly_expense", "monthly_expense"),
+        ("transaction_frequency_daily", "transaction_frequency_daily"),
+        ("assets_estimate", "assets_estimate"),
+    ]:
+        if field in extracted and extracted[field] is not None:
+            session_updates[col] = extracted[field]
 
-    # Emotional signal
+    # Emotional signals
     if flags.get("emotional_signal"):
         session_updates["emotional_signal"] = True
     if flags.get("wellbeing_concern"):
         session_updates["wellbeing_concern"] = True
 
     db.table("sessions").update(session_updates).eq("id", str(session_id)).execute()
+
+    # ── Sync extracted fields ke business_profiles ────────────
+    bp_updates = {}
+    for ext_field, bp_col in _BP_FIELD_MAP.items():
+        if ext_field in extracted and extracted[ext_field] is not None:
+            bp_updates[bp_col] = extracted[ext_field]
+
+    if bp_updates:
+        business_id = session.get("business_id")
+        if business_id:
+            try:
+                db.table("business_profiles").update(bp_updates).eq("id", str(business_id)).execute()
+                logger.info(
+                    "business_profile_synced",
+                    business_id=str(business_id),
+                    fields=list(bp_updates.keys()),
+                )
+            except Exception as exc:
+                logger.error("business_profile_sync_failed", error=str(exc))
 
     return _save_and_return(
         db=db,
@@ -274,8 +422,7 @@ def _save_and_return(
         "current_stage": original_session.get("interview_stage"),
     }).execute()
 
-    # Save RINA response - we just pass the dict directly because the DB column is JSONB. 
-    # Supabase automatically serializes python dict to jsonb column.
+    # Save RINA response
     rina_msg_result = db.table("chat_history").insert({
         "session_id": session_id,
         "role": "assistant",
@@ -325,7 +472,7 @@ async def get_messages(
                 extracted = json.loads(extracted)
             except:
                 extracted = {}
-                
+
         flags = m.get("flags") or {}
         if isinstance(flags, str):
             try:

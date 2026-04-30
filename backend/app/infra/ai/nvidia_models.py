@@ -304,11 +304,17 @@ class GLMChatClient(_NvidiaBaseClient):
         """Susun messages list sesuai format OpenAI Chat Completions."""
         context_prefix = ""
         if session_context:
+            collected = session_context.get('collected_fields', {})
+            collected_str = json.dumps(collected, ensure_ascii=False) if collected else "Belum ada"
+            missing = session_context.get('missing_fields', [])
+            missing_str = ", ".join(missing) if missing else "Semua field sudah lengkap!"
             context_prefix = (
                 f"[KONTEKS SESI]\n"
                 f"Stage: {session_context.get('interview_stage', 'intro')}\n"
                 f"Progress: {session_context.get('progress_pct', 0)}%\n"
-                f"Data terkumpul: {json.dumps(session_context.get('collected_fields', {}), ensure_ascii=False)}\n"
+                f"Data terkumpul: {collected_str}\n"
+                f"Field BELUM terkumpul di stage ini: {missing_str}\n"
+                f"ATURAN: JANGAN tanyakan field yang sudah ada di 'Data terkumpul'. Tanyakan HANYA dari 'Field BELUM terkumpul'!\n"
                 f"[PESAN USER]\n"
             )
 
