@@ -157,7 +157,7 @@ def _compute_stage(snapshot: dict) -> str:
 
 def _get_missing_fields(snapshot: dict, current_stage: str) -> list[str]:
     """Dapatkan daftar SEMUA mandatory fields yang belum terkumpul."""
-    return [f for f in MANDATORY_FIELDS if not snapshot.get(f)]
+    return [f for f in MANDATORY_FIELDS if snapshot.get(f) is None or snapshot.get(f) == ""]
 
 
 class SendMessageRequest(BaseModel):
