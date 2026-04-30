@@ -23,6 +23,7 @@ Singleton factories:
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from app.core.errors import AIProviderError
@@ -30,12 +31,16 @@ from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Timeout untuk primary provider sebelum fallback ke secondary.
+# Dibuat pendek (15s) agar user tidak menunggu terlalu lama jika primary lambat.
+_PRIMARY_TIMEOUT_S = 15
+
 
 # ── Fallback Chat Router ────────────────────────────────────────
 
 class FallbackChatRouter:
     """
-    Router chat: Azure OpenAI (primary) → NVIDIA GLM4.7 (fallback).
+    Router chat: GitHub Models (primary) → NVIDIA GLM4.7 (fallback).
 
     Interface identik dengan GLMChatClient — method .chat() dengan signature sama.
     Caller di chat/router.py tidak perlu tahu sedang berbicara dengan siapa.
@@ -52,7 +57,7 @@ class FallbackChatRouter:
         session_context: dict | None = None,
     ) -> dict[str, Any]:
         """
-        Coba Azure OpenAI dulu, fallback ke NVIDIA jika gagal.
+        Coba GitHub Models dulu (max 15s), fallback ke NVIDIA jika gagal/lambat.
 
         Returns:
             dict dengan keys: message, current_stage, ui_trigger,
@@ -61,18 +66,29 @@ class FallbackChatRouter:
         Raises:
             AIProviderError — hanya jika KEDUA provider gagal.
         """
-        # ── Primary: GitHub Models ──────────────────────────────
+        # ── Primary: GitHub Models (dengan timeout ketat) ───────
         try:
-            result = await self._primary.chat(
-                user_message=user_message,
-                history=history,
-                session_context=session_context,
+            result = await asyncio.wait_for(
+                self._primary.chat(
+                    user_message=user_message,
+                    history=history,
+                    session_context=session_context,
+                ),
+                timeout=_PRIMARY_TIMEOUT_S,
             )
             logger.info(
                 "chat_provider_github_success",
                 provider="github_models",
             )
             return result
+
+        except asyncio.TimeoutError:
+            logger.warning(
+                "chat_primary_timeout_fallback_nvidia",
+                provider="github_models",
+                timeout_s=_PRIMARY_TIMEOUT_S,
+                fallback_to="nvidia_glm4.7",
+            )
 
         except Exception as primary_exc:
             logger.warning(

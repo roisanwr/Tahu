@@ -8,71 +8,18 @@ import json
 from typing import Any
 
 from openai import AsyncOpenAI
-from openai import AsyncAzureOpenAI
-import traceback
+import httpx
 
 from app.core.errors import AIProviderError
 from app.core.logging import get_logger
+from app.infra.ai.system_prompt import RINA_SYSTEM_PROMPT
 
 logger = get_logger(__name__)
 
-# System prompt RINA — dari NUSA_CHAT_FLOW_MASTER_SPEC.md Section 1
-RINA_SYSTEM_PROMPT = """
-Kamu adalah "RINA", asisten AI ramah milik platform TAHU yang membantu
-pelaku UMKM menyiapkan profil usaha untuk penilaian kelayakan kredit.
-Tugasmu adalah mewawancarai mereka secara natural dalam Bahasa Indonesia
-santai, hangat, dan tidak kaku.
+# ── Timeout & limits ──────────────────────────────────────────
+_GITHUB_TIMEOUT_S = 30      # max 30 detik per request (sebelumnya: default SDK 10 menit!)
+_MAX_HISTORY = 10            # kirim max 10 pesan history (sebelumnya: 20)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ATURAN WAJIB — KOMUNIKASI
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. Tanyakan SATU hal per giliran. Jangan menumpuk pertanyaan.
-2. Gunakan bahasa santai ("Kak", "kita", "nih", "dong").
-3. Framing WAJIB: ini adalah "melengkapi profil usaha",
-   BUKAN "penilaian kredit" atau "credit scoring".
-4. Gunakan BRIDGE SENTENCE saat transisi antar topik.
-5. Jika user menjawab ambigu → minta klarifikasi sopan.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ATURAN WAJIB — STATE MACHINE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-6. Jika user menyebut data dari stage lain → simpan, acknowledge, lanjut.
-7. Jika user revisi data → update field, konfirmasi, lanjut.
-   Kata kunci revisi: "eh salah", "ralat", "koreksi", "tadi aku bilang",
-   "bukan", "sebenarnya", "lupa".
-8. JANGAN restart dari awal hanya karena ada revisi.
-9. JIKA semua MANDATORY FIELDS sudah terkumpul ATAU user meminta diakhiri, WAJIB pindah ke "current_stage": "summary", berikan pesan penutup yang menyemangati, dan set "ui_trigger": "summary_card". Jangan bertanya lagi jika sudah di stage summary.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MANDATORY FIELDS (kumpulkan semua ini)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-owner_name, business_name, business_category,
-years_operating, employee_count, has_fixed_location,
-monthly_revenue, monthly_expense, transaction_frequency_daily,
-assets_estimate, prev_loan_status, location (GPS atau alamat)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ALUR STAGE: intro→profil→keuangan→geolokasi→dokumen→summary
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-FORMAT OUTPUT — WAJIB JSON
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{
-  "message": "Pesan ke user",
-  "current_stage": "intro|profil|keuangan|dokumen|geolokasi|summary",
-  "ui_trigger": null | "map_picker" | "file_upload" | "summary_card" | "login_gate" | "psikometrik_widget",
-  "extracted_fields": { "field_name": "value" },
-  "updated_fields": { "field_name": { "old": "...", "new": "..." } },
-  "flags": {
-    "contradiction_detected": false,
-    "plausibility_warning": false,
-    "hard_block_trigger": false,
-    "data_flag": "sufficient"
-  }
-}
-Output HARUS selalu valid JSON. Tidak boleh ada teks di luar JSON.
-"""
 
 class GitHubModelsClient:
     """Client untuk integrasi GitHub Models yang kompatibel dengan standar OpenAI."""
@@ -84,12 +31,14 @@ class GitHubModelsClient:
         self.client = AsyncOpenAI(
             base_url="https://models.inference.ai.azure.com",
             api_key=api_key,
+            timeout=httpx.Timeout(_GITHUB_TIMEOUT_S, connect=10.0),
         )
         self.model = model
         
         logger.info(
             "github_models_initialized",
             model=model,
+            timeout_s=_GITHUB_TIMEOUT_S,
             key_hint=api_key[:15] + "..."
         )
 
@@ -112,9 +61,9 @@ class GitHubModelsClient:
 
         full_message = context_prefix + user_message
 
-        # Build messages for OpenAI spec
+        # Build messages for OpenAI spec — batasi history
         messages = [{"role": "system", "content": RINA_SYSTEM_PROMPT}]
-        for msg in history[-20:]: # We get max 20 from previous db query
+        for msg in history[-_MAX_HISTORY:]:
             role = "user" if msg["role"] == "user" else "assistant"
             messages.append({"role": role, "content": msg["content"]})
         messages.append({"role": "user", "content": full_message})
@@ -124,10 +73,8 @@ class GitHubModelsClient:
                 messages=messages,
                 model=self.model,
                 temperature=0.7,
-                max_tokens=2048,
-                # Tidak pakai response_format=json_object — GitHub Models API
-                # mensyaratkan kata 'json' di SEMUA messages jika pakai mode ini,
-                # yang tidak selalu terpenuhi. JSON di-parse manual via _parse_json().
+                max_tokens=1024,
+                response_format={"type": "json_object"},
             )
             raw_text = response.choices[0].message.content
             return self._parse_json(raw_text or "")
@@ -164,8 +111,6 @@ class GitHubModelsClient:
                 messages=messages,
                 model=self.model,
                 temperature=0.1,
-                # Tidak pakai response_format=json_object — parse manual lebih aman
-                # untuk GitHub Models API (lihat catatan di method chat())
             )
             raw_text = response.choices[0].message.content or "{}"
             try:
@@ -196,8 +141,15 @@ class GitHubModelsClient:
                     return json.loads(json_match.group())
                 except json.JSONDecodeError:
                     pass
-            logger.error("github_models_invalid_json", raw_preview=raw_text[:200])
-            raise AIProviderError("Response RINA tidak valid JSON")
+            logger.warning("github_models_invalid_json_fallback", raw_preview=raw_text[:200])
+            # Graceful fallback instead of error
+            return {
+                "message": raw_text.strip() or "Maaf, aku lagi kurang fokus. Bisa diulangi?",
+                "current_stage": None,
+                "ui_trigger": None,
+                "extracted_fields": {},
+                "flags": {"plain_text_fallback": True}
+            }
 
 
 # ── Singleton ─────────────────────────────────────────────────

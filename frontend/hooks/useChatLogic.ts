@@ -237,12 +237,20 @@ export function useChatLogic() {
       return;
     }
     setIsTyping(true);
+
+    // Timeout 45 detik — kalau backend belum jawab, lebih baik abort dan beri tahu user
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45_000);
+
     try {
       const res = await fetch(`${API_BASE_URL}/sessions/${sid}/messages`, {
         method: "POST",
         headers: authHeaders(useToken),
         body: JSON.stringify({ content: text, message_type: "text" }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -259,17 +267,14 @@ export function useChatLogic() {
           return;
         }
 
-        // 5xx — server error, coba 1x retry otomatis
-        if (res.status >= 500 && _retryCount < 1) {
-          await new Promise((r) => setTimeout(r, 1500));
-          return sendMessageToBackend(sid, text, _retryCount + 1, activeToken);
-        }
-
-        // Error lainnya
-        addBot(
-          errData?.detail?.message ||
-            "Ups, ada masalah saat memproses pesanmu. Coba lagi ya Kak 😊"
-        );
+        // Semua error lainnya (termasuk 5xx) — TIDAK retry dari frontend.
+        // Backend sudah handle retry internal ke AI provider.
+        // Frontend retry hanya menggandakan waktu tunggu user.
+        const errorMsg =
+          errData?.detail?.message ||    // format dari HTTPException
+          errData?.error?.message ||     // format dari global error handler
+          "Ups, ada masalah saat memproses pesanmu. Coba lagi ya Kak 😊";
+        addBot(errorMsg);
         return;
       }
 
@@ -286,7 +291,16 @@ export function useChatLogic() {
 
       addBot(data.content ?? data.message ?? "", extra);
     } catch (e: any) {
-      // Network error — retry sekali
+      clearTimeout(timeoutId);
+
+      // AbortError = timeout — beri pesan khusus
+      if (e?.name === "AbortError") {
+        console.error("sendMessageToBackend: request timeout (45s)");
+        addBot("Maaf Kak, server butuh waktu terlalu lama untuk membalas. Coba kirim ulang ya! ⏳");
+        return;
+      }
+
+      // Network error — retry sekali saja
       if (e?.name === "TypeError" && _retryCount < 1) {
         await new Promise((r) => setTimeout(r, 1500));
         return sendMessageToBackend(sid, text, _retryCount + 1, activeToken);

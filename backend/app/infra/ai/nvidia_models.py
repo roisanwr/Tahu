@@ -27,73 +27,21 @@ from openai import AsyncOpenAI, APITimeoutError, APIConnectionError, APIStatusEr
 
 from app.core.errors import AIProviderError
 from app.core.logging import get_logger
+from app.infra.ai.system_prompt import RINA_SYSTEM_PROMPT as _SHARED_RINA_PROMPT
 
 logger = get_logger(__name__)
 
 # ── Shared constants ───────────────────────────────────────────
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
-_CHAT_TIMEOUT_S = 60        # timeout untuk GLM chat (lebih cepat)
-_EXTRACT_TIMEOUT_S = 180    # timeout untuk DeepSeek extraction (lebih lambat)
-_MAX_RETRIES = 2            # retry maksimum sebelum raise error
+_CHAT_TIMEOUT_S = 30        # timeout untuk GLM chat (turun dari 60s)
+_EXTRACT_TIMEOUT_S = 120    # timeout untuk DeepSeek extraction (turun dari 180s)
+_MAX_RETRIES = 1            # retry maksimum sebelum raise error (turun dari 2)
+_MAX_HISTORY = 10           # max history messages (turun dari 20)
 
 
 # ── System prompt RINA ─────────────────────────────────────────
-RINA_SYSTEM_PROMPT = """
-Kamu adalah "RINA", asisten AI ramah milik platform TAHU yang membantu
-pelaku UMKM menyiapkan profil usaha untuk penilaian kelayakan kredit.
-Tugasmu adalah mewawancarai mereka secara natural dalam Bahasa Indonesia
-santai, hangat, dan tidak kaku.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ATURAN WAJIB — KOMUNIKASI
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. Tanyakan SATU hal per giliran. Jangan menumpuk pertanyaan.
-2. Gunakan bahasa santai ("Kak", "kita", "nih", "dong").
-3. Framing WAJIB: ini adalah "melengkapi profil usaha",
-   BUKAN "penilaian kredit" atau "credit scoring".
-4. Gunakan BRIDGE SENTENCE saat transisi antar topik.
-5. Jika user menjawab ambigu → minta klarifikasi sopan.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ATURAN WAJIB — STATE MACHINE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-6. Jika user menyebut data dari stage lain → simpan, acknowledge, lanjut.
-7. Jika user revisi data → update field, konfirmasi, lanjut.
-   Kata kunci revisi: "eh salah", "ralat", "koreksi", "tadi aku bilang",
-   "bukan", "sebenarnya", "lupa".
-8. JANGAN restart dari awal hanya karena ada revisi.
-9. JIKA semua MANDATORY FIELDS sudah terkumpul ATAU user meminta diakhiri, WAJIB pindah ke "current_stage": "summary", berikan pesan penutup yang menyemangati, dan set "ui_trigger": "summary_card". Jangan bertanya lagi jika sudah di stage summary.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MANDATORY FIELDS (kumpulkan semua ini)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-owner_name, business_name, business_category,
-years_operating, employee_count, has_fixed_location,
-monthly_revenue, monthly_expense, transaction_frequency_daily,
-assets_estimate, prev_loan_status, location (GPS atau alamat)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ALUR STAGE: intro→profil→keuangan→geolokasi→dokumen→summary
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-FORMAT OUTPUT — WAJIB JSON
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{
-  "message": "Pesan ke user",
-  "current_stage": "intro|profil|keuangan|dokumen|geolokasi|summary",
-  "ui_trigger": null | "map_picker" | "file_upload" | "summary_card" | "login_gate" | "psikometrik_widget",
-  "extracted_fields": { "field_name": "value" },
-  "updated_fields": { "field_name": { "old": "...", "new": "..." } },
-  "flags": {
-    "contradiction_detected": false,
-    "plausibility_warning": false,
-    "hard_block_trigger": false,
-    "data_flag": "sufficient"
-  }
-}
-Output HARUS selalu valid JSON. Tidak boleh ada teks di luar JSON.
-"""
+# System prompt diimpor dari shared module (single source of truth)
+RINA_SYSTEM_PROMPT = _SHARED_RINA_PROMPT
 
 
 # ── Base client ────────────────────────────────────────────────
@@ -283,15 +231,18 @@ class _NvidiaBaseClient:
             except json.JSONDecodeError:
                 pass
 
-        logger.error(
-            "nvidia_invalid_json_response",
+        logger.warning(
+            "nvidia_invalid_json_fallback",
             model=model_name,
-            raw_preview=raw_text[:300],
+            raw_preview=raw_text[:200],
         )
-        raise AIProviderError(
-            f"Response dari {model_name} bukan valid JSON. "
-            f"Preview: {raw_text[:100]}"
-        )
+        return {
+            "message": raw_text.strip() or "Maaf, aku lagi kurang fokus. Bisa diulangi?",
+            "current_stage": None,
+            "ui_trigger": None,
+            "extracted_fields": {},
+            "flags": {"plain_text_fallback": True}
+        }
 
 
 # ── GLM Chat Client ────────────────────────────────────────────
@@ -328,10 +279,10 @@ class GLMChatClient(_NvidiaBaseClient):
         try:
             raw_content, reasoning = await self._stream_completion(
                 messages=messages,
-                temperature=1.0,    # GLM4.7 optimal di temperature=1
-                top_p=1.0,
-                max_tokens=16384,
-                extra_body={"chat_template_kwargs":{"enable_thinking":True,"clear_thinking":False}},
+                temperature=0.7,    # Turun dari 1.0 — lebih cepat & stabil
+                top_p=0.95,
+                max_tokens=2048,    # Turun dari 16384 — RINA response max ~500 token
+                # Thinking mode DIMATIKAN — menambah 5-15s latency tanpa benefit signifikan untuk chat
             )
         except AIProviderError:
             raise
@@ -363,7 +314,7 @@ class GLMChatClient(_NvidiaBaseClient):
 
         messages: list[dict] = [{"role": "system", "content": RINA_SYSTEM_PROMPT}]
 
-        for msg in history[-20:]:
+        for msg in history[-_MAX_HISTORY:]:
             role = "user" if msg["role"] == "user" else "assistant"
             messages.append({"role": role, "content": msg["content"]})
 

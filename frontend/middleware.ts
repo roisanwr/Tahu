@@ -57,7 +57,9 @@ export const config = {
      * - _next/image (image optimization)
      * - favicon.ico
      * - file dengan ekstensi (png, jpg, dll)
+     * - api/v1/* (proxy ke backend — backend handle auth sendiri,
+     *   jadi middleware auth di sini cuma menambah latency ~200-500ms sia-sia)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/v1/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
