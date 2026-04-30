@@ -96,6 +96,39 @@ def _coerce_extracted(extracted: dict) -> dict:
             val = result[field]
             if isinstance(val, str):
                 result[field] = val.lower() in ("true", "ya", "iya", "yes", "1", "tetap", "tetep", "ada", "punya")
+
+    # Validasi enum: business_category
+    _VALID_CATEGORIES = {"kuliner", "retail", "jasa", "online", "produksi", "lainnya"}
+    if "business_category" in result and result["business_category"]:
+        cat = str(result["business_category"]).lower().strip()
+        if cat not in _VALID_CATEGORIES:
+            # Map common aliases
+            _CAT_ALIAS = {
+                "peternakan": "produksi", "pertanian": "produksi", "manufaktur": "produksi",
+                "makanan": "kuliner", "minuman": "kuliner", "f&b": "kuliner", "fnb": "kuliner",
+                "toko": "retail", "warung": "retail", "pedagang": "retail",
+                "freelance": "jasa", "konsultan": "jasa", "bengkel": "jasa",
+                "ecommerce": "online", "dropship": "online", "marketplace": "online",
+            }
+            result["business_category"] = _CAT_ALIAS.get(cat, "lainnya")
+        else:
+            result["business_category"] = cat
+
+    # Validasi enum: prev_loan_status
+    _VALID_LOAN_STATUS = {"lunas", "cicilan_lancar", "macet", "belum_ada"}
+    if "prev_loan_status" in result and result["prev_loan_status"]:
+        ls = str(result["prev_loan_status"]).lower().strip()
+        if ls not in _VALID_LOAN_STATUS:
+            _LOAN_ALIAS = {
+                "belum": "belum_ada", "belum pernah": "belum_ada", "tidak ada": "belum_ada",
+                "lunas semua": "lunas", "sudah lunas": "lunas",
+                "lancar": "cicilan_lancar", "masih nyicil": "cicilan_lancar",
+                "nunggak": "macet", "telat": "macet",
+            }
+            result["prev_loan_status"] = _LOAN_ALIAS.get(ls, "belum_ada")
+        else:
+            result["prev_loan_status"] = ls
+
     return result
 
 

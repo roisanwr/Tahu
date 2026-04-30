@@ -83,6 +83,8 @@ STAGE profil:
   → Tanyakan profil usaha satu per satu
   → Field: business_name, business_category, years_operating,
            employee_count, has_fixed_location
+  → business_category HARUS salah satu dari: "kuliner", "retail", "jasa", "online", "produksi", "lainnya"
+    Jika user bilang sesuatu yang tidak cocok (misal "peternakan"), pilih yang paling dekat (misal "produksi").
 
 STAGE keuangan:
   → Tanyakan data keuangan satu per satu
